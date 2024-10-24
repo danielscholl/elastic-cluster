@@ -34,10 +34,6 @@ param elasticVersion string = '8.15.3'
 @description('Number of Instances')
 param instances int = 1
 
-@description('Enable AKS Backup')
-param enableBackup bool = false
-
-
 @description('Date Stamp - Used for sentinel in configuration store.')
 param dateStamp string = utcNow()
 
@@ -74,7 +70,7 @@ var configuration = {
     enableMesh: false
     enablePaasPool: false
     enableStampTest: false
-    enableBackup: enableBackup
+    enableBackup: true
   }
 }
 
