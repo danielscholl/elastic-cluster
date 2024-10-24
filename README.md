@@ -1,4 +1,4 @@
-# Production Compliant Clusters for Workloads
+# Production Compliant Elastic Search Cluster
 
 This is a sample project for deploying a production compliant cluster running instances of elastic search that adheres to the [best practices](https://learn.microsoft.com/en-us/azure/aks/best-practices) of Azure Kubernetes Service (AKS).
 
