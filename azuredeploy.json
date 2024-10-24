@@ -5,10 +5,10 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "15156899906758612887"
+      "templateHash": "8932612983057824843"
     },
     "name": "Managed Kubernetes.",
-    "description": "This instance deploys a managed Kubernetes cluster."
+    "description": "This deploys a managed Kubernetes cluster."
   },
   "parameters": {
     "location": {
@@ -33,34 +33,10 @@
       }
     },
     "userObjectId": {
-      "type": "string",
+      "type": "securestring",
+      "defaultValue": "",
       "metadata": {
-        "description": "The object ID of the user to assign a cluster admin role for."
-      }
-    },
-    "fluxSource": {
-      "type": "string",
-      "defaultValue": "git",
-      "allowedValues": [
-        "git",
-        "azureblob"
-      ],
-      "metadata": {
-        "description": "Source type for Flux configuration: \"git\" or \"azureblob\""
-      }
-    },
-    "enableBackup": {
-      "type": "bool",
-      "defaultValue": true,
-      "metadata": {
-        "description": "Enable Backup"
-      }
-    },
-    "elasticStamp": {
-      "type": "bool",
-      "defaultValue": true,
-      "metadata": {
-        "description": "Deploy an Elastic Stamp"
+        "description": "The object ID of a user to assign as cluster admin."
       }
     },
     "elasticVersion": {
@@ -100,9 +76,6 @@
         "input": "[createArray(createObject('secretName', format('elastic-username-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', 'elastic-user'), createObject('secretName', format('elastic-password-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', substring(uniqueString(resourceGroup().id, parameters('userObjectId'), parameters('location'), format('saltpass{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')])), 0, 13)), createObject('secretName', format('elastic-key-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', substring(format('{0}{1}{2}', variables('baseElasticKey'), variables('baseElasticKey'), variables('baseElasticKey')), 0, 32)))]"
       }
     ],
-    "stampTest": false,
-    "enablePaasPool": false,
-    "enableMesh": false,
     "configuration": {
       "name": "main",
       "displayName": "Main Resources",
@@ -124,9 +97,17 @@
         "sku": "Standard"
       },
       "cluster": {
-        "sku": "Automatic",
+        "sku": "Base",
         "tier": "Standard",
         "vmSize": "[parameters('vmSize')]"
+      },
+      "features": {
+        "enableStampElastic": true,
+        "enablePrivateSoftware": false,
+        "enableMesh": false,
+        "enablePaasPool": false,
+        "enableStampTest": false,
+        "enableBackup": false
       }
     },
     "rg_unique_id": "[format('{0}{1}', replace(variables('configuration').name, '-', ''), uniqueString(resourceGroup().id, variables('configuration').name))]",
@@ -2732,29 +2713,16 @@
             ]
           },
           "roleAssignments": {
-            "value": [
-              {
-                "roleDefinitionIdOrName": "Azure Kubernetes Service RBAC Cluster Admin",
-                "principalId": "[parameters('userObjectId')]",
-                "principalType": "User"
-              },
-              {
-                "roleDefinitionIdOrName": "Azure Kubernetes Service RBAC Cluster Admin",
-                "principalId": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.principalId.value]",
-                "principalType": "ServicePrincipal"
-              },
-              {
-                "roleDefinitionIdOrName": "Kubernetes Agentless Operator",
-                "principalId": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.principalId.value]",
-                "principalType": "ServicePrincipal"
-              }
-            ]
+            "value": "[concat(if(empty(parameters('userObjectId')), createArray(), createArray(createObject('roleDefinitionIdOrName', 'Azure Kubernetes Service RBAC Cluster Admin', 'principalId', parameters('userObjectId'), 'principalType', 'User'))), createArray(createObject('roleDefinitionIdOrName', 'Azure Kubernetes Service RBAC Cluster Admin', 'principalId', reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.principalId.value, 'principalType', 'ServicePrincipal'), createObject('roleDefinitionIdOrName', 'Kubernetes Agentless Operator', 'principalId', reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.principalId.value, 'principalType', 'ServicePrincipal')))]"
           },
           "networkPlugin": {
             "value": "azure"
           },
           "networkPluginMode": {
             "value": "overlay"
+          },
+          "networkDataplane": {
+            "value": "cilium"
           },
           "publicNetworkAccess": {
             "value": "Enabled"
@@ -2863,12 +2831,13 @@
                 "count": 1,
                 "securityProfile": {
                   "sshAccess": "Disabled"
-                }
+                },
+                "osType": "Linux"
               }
             ]
           },
           "agentPools": {
-            "value": "[concat(createArray(createObject('name', 'defaultpool', 'mode', 'User', 'vmSize', variables('configuration').cluster.vmSize, 'count', 1, 'availabilityZones', createArray('1', '2', '3'))), if(variables('enablePaasPool'), createArray(createObject('name', 'paaspool', 'mode', 'User', 'vmSize', variables('configuration').cluster.vmSize, 'count', 1, 'availabilityZones', createArray('1', '2', '3'), 'nodeTaints', createArray('app=cluster-paas:NoSchedule'), 'nodeLabels', createObject('app', 'cluster-paas'))), createArray()))]"
+            "value": "[concat(createArray(createObject('name', 'defaultpool', 'mode', 'User', 'vmSize', variables('configuration').cluster.vmSize, 'count', 1, 'securityProfile', createObject('sshAccess', 'Disabled'), 'osType', 'Linux')), if(variables('configuration').features.enablePaasPool, createArray(createObject('name', 'paaspool', 'mode', 'User', 'vmSize', variables('configuration').cluster.vmSize, 'count', 1, 'securityProfile', createObject('sshAccess', 'Disabled'), 'osType', 'Linux', 'nodeTaints', createArray('app=cluster-paas:NoSchedule'), 'nodeLabels', createObject('app', 'cluster-paas'))), createArray()))]"
           },
           "enableAzureDefender": {
             "value": true
@@ -2882,9 +2851,9 @@
           "enableAzureMonitorProfileMetrics": {
             "value": true
           },
-          "istioServiceMeshEnabled": "[if(variables('enableMesh'), createObject('value', true()), createObject('value', false()))]",
-          "istioIngressGatewayEnabled": "[if(variables('enableMesh'), createObject('value', true()), createObject('value', false()))]",
-          "istioIngressGatewayType": "[if(variables('enableMesh'), createObject('value', 'External'), createObject('value', null()))]"
+          "istioServiceMeshEnabled": "[if(variables('configuration').features.enableMesh, createObject('value', true()), createObject('value', false()))]",
+          "istioIngressGatewayEnabled": "[if(variables('configuration').features.enableMesh, createObject('value', true()), createObject('value', false()))]",
+          "istioIngressGatewayType": "[if(variables('configuration').features.enableMesh, createObject('value', 'External'), createObject('value', null()))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -2894,7 +2863,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "16149884756981351517"
+              "templateHash": "5487381612119365065"
             },
             "name": "Azure Kubernetes Service (AKS) Managed Clusters",
             "description": "This module deploys an Azure Kubernetes Service (AKS) Managed Cluster."
@@ -3717,9 +3686,9 @@
             },
             "skuName": {
               "type": "string",
-              "defaultValue": "Basic",
+              "defaultValue": "Base",
               "allowedValues": [
-                "Basic",
+                "Base",
                 "Automatic"
               ],
               "metadata": {
@@ -14580,16 +14549,6 @@
                 "principalType": "ServicePrincipal"
               },
               {
-                "roleDefinitionIdOrName": "Storage Table Data Contributor",
-                "principalId": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.principalId.value]",
-                "principalType": "ServicePrincipal"
-              },
-              {
-                "roleDefinitionIdOrName": "Storage File Data SMB Share Contributor",
-                "principalId": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.principalId.value]",
-                "principalType": "ServicePrincipal"
-              },
-              {
                 "roleDefinitionIdOrName": "Contributor",
                 "principalId": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-cluster', variables('configuration').name)), '2022-09-01').outputs.kubeletIdentityObjectId.value]",
                 "principalType": "ServicePrincipal"
@@ -14600,7 +14559,7 @@
             "value": false
           },
           "allowSharedKeyAccess": {
-            "value": "[parameters('enableBackup')]"
+            "value": "[variables('configuration').features.enableBackup]"
           },
           "publicNetworkAccess": {
             "value": "Enabled"
@@ -19272,7 +19231,7 @@
       ]
     },
     {
-      "condition": "[parameters('enableBackup')]",
+      "condition": "[variables('configuration').features.enableBackup]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "[format('{0}-backup', variables('configuration').name)]",
@@ -19309,7 +19268,8 @@
           "securitySettings": {
             "value": {
               "softDeleteSettings": {
-                "enhancedSecurityState": "Disabled"
+                "state": "Off",
+                "retentionDurationInDays": 14
               }
             }
           },
@@ -19849,7 +19809,7 @@
       ]
     },
     {
-      "condition": "[parameters('enableBackup')]",
+      "condition": "[variables('configuration').features.enableBackup]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "[format('{0}-backup-extension', variables('configuration').name)]",
@@ -20024,7 +19984,7 @@
       ]
     },
     {
-      "condition": "[parameters('enableBackup')]",
+      "condition": "[variables('configuration').features.enableBackup]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "aksTrustedRoleBindingDeploymentScript",
@@ -20080,7 +20040,7 @@
             "value": "PT1H"
           },
           "scriptContent": {
-            "value": "      az login --identity\n      az aks trustedaccess rolebinding create --resource-group $rgName --cluster-name $clusterName --name $bindingName --source-resource-id $vaultId --roles Microsoft.DataProtection/backupVaults/backup-operator\n    "
+            "value": "      az login --identity\n      existingBinding=$(az aks trustedaccess rolebinding list --resource-group $rgName --cluster-name $clusterName --query \"[?name=='$bindingName']\" -o tsv)\n      if [ -z \"$existingBinding\" ]; then\n        az aks trustedaccess rolebinding create --resource-group $rgName --cluster-name $clusterName --name $bindingName --source-resource-id $vaultId --roles Microsoft.DataProtection/backupVaults/backup-operator\n      else\n        echo \"Role binding $bindingName already exists.\"\n      fi\n    "
           }
         },
         "template": {
@@ -20595,8 +20555,7 @@
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', format('{0}-backup', variables('configuration').name))]",
         "[resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name))]",
-        "[resourceId('Microsoft.Resources/deployments', format('{0}-cluster', variables('configuration').name))]",
-        "[resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name))]"
+        "[resourceId('Microsoft.Resources/deployments', format('{0}-cluster', variables('configuration').name))]"
       ]
     },
     {
@@ -20876,16 +20835,7 @@
           },
           "fluxConfigurations": {
             "value": [
-              {
-                "namespace": "flux-system",
-                "name": "flux-system",
-                "scope": "cluster",
-                "suspend": false,
-                "sourceKind": "[if(equals(parameters('fluxSource'), 'git'), 'GitRepository', 'Bucket')]",
-                "gitRepository": "[if(equals(parameters('fluxSource'), 'git'), createObject('repositoryRef', createObject('branch', 'main'), 'sshKnownHosts', '', 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'url', 'https://github.com/danielscholl/cluster-paas'), null())]",
-                "bucket": "[if(equals(parameters('fluxSource'), 'azureblob'), createObject('bucketName', 'gitops', 'provider', 'azure', 'interval', '1m', 'accessFrom', createObject('kind', 'managedIdentity', 'name', reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.name.value), 'endpoint', reference(resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name)), '2022-09-01').outputs.primaryBlobEndpoint.value), null())]",
-                "kustomizations": "[shallowMerge(createArray(createObject('global', createObject('path', './software/global', 'dependsOn', createArray(), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), if(variables('stampTest'), createObject('stamptest', createObject('path', './software/stamp-test', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject()), if(parameters('elasticStamp'), createObject('stampelastic', createObject('path', './software/stamp-elastic', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject())))]"
-              }
+              "[shallowMerge(createArray(createObject('namespace', 'flux-system', 'name', 'flux-system', 'scope', 'cluster', 'suspend', false(), 'sourceKind', if(equals(variables('configuration').features.enablePrivateSoftware, true()), 'AzureBlob', 'GitRepository')), if(variables('configuration').features.enablePrivateSoftware, createObject('azureBlob', createObject('containerName', 'gitops', 'url', reference(resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name)), '2022-09-01').outputs.primaryBlobEndpoint.value)), createObject('gitRepository', createObject('repositoryRef', createObject('branch', 'main'), 'sshKnownHosts', '', 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'url', 'https://github.com/danielscholl/cluster-paas'))), createObject('kustomizations', shallowMerge(createArray(createObject('global', createObject('path', './software/global', 'dependsOn', createArray(), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), if(variables('configuration').features.enableStampTest, createObject('stamptest', createObject('path', './software/stamp-test', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject()), if(variables('configuration').features.enableStampElastic, createObject('stampelastic', createObject('path', './software/stamp-elastic', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject()))))))]"
             ]
           }
         },
@@ -20896,8 +20846,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.28.1.47646",
-              "templateHash": "13180339111594679196"
+              "version": "0.30.23.60470",
+              "templateHash": "5465495026823706914"
             },
             "name": "Kubernetes Configuration Extensions",
             "description": "This module deploys a Kubernetes Configuration Extension.",
@@ -20928,6 +20878,13 @@
               "defaultValue": "[resourceGroup().location]",
               "metadata": {
                 "description": "Optional. Location for all resources."
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional. The name of the storage account to be used."
               }
             },
             "configurationProtectedSettings": {
@@ -20991,7 +20948,7 @@
               "condition": "[parameters('enableTelemetry')]",
               "type": "Microsoft.Resources/deployments",
               "apiVersion": "2024-03-01",
-              "name": "[format('46d3xbcp.res.kubernetesconfiguration-extension.{0}.{1}', replace('0.3.4', '.', '-'), substring(uniqueString(deployment().name, parameters('location')), 0, 4))]",
+              "name": "[format('46d3xbcp.res.kubernetesconfiguration-extension.{0}.{1}', replace('-..--..-', '.', '-'), substring(uniqueString(deployment().name, parameters('location')), 0, 4))]",
               "properties": {
                 "mode": "Incremental",
                 "template": {
@@ -21015,7 +20972,7 @@
             },
             "extension": {
               "type": "Microsoft.KubernetesConfiguration/extensions",
-              "apiVersion": "2022-03-01",
+              "apiVersion": "2023-05-01",
               "scope": "[format('Microsoft.ContainerService/managedClusters/{0}', parameters('clusterName'))]",
               "name": "[parameters('name')]",
               "properties": {
@@ -21060,7 +21017,7 @@
                   "namespace": {
                     "value": "[coalesce(parameters('fluxConfigurations'), createArray())[copyIndex()].namespace]"
                   },
-                  "sourceKind": "[if(contains(coalesce(parameters('fluxConfigurations'), createArray())[copyIndex()], 'gitRepository'), createObject('value', 'GitRepository'), createObject('value', 'Bucket'))]",
+                  "sourceKind": "[if(contains(coalesce(parameters('fluxConfigurations'), createArray())[copyIndex()], 'gitRepository'), createObject('value', 'GitRepository'), createObject('value', 'AzureBlob'))]",
                   "name": {
                     "value": "[coalesce(tryGet(coalesce(parameters('fluxConfigurations'), createArray())[copyIndex()], 'name'), toLower(format('{0}-fluxconfiguration{1}', parameters('clusterName'), copyIndex())))]"
                   },
@@ -21087,8 +21044,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.23.1.45101",
-                      "templateHash": "885928168160399718"
+                      "version": "0.30.23.60470",
+                      "templateHash": "7866905626720137637"
                     },
                     "name": "Kubernetes Configuration Flux Configurations",
                     "description": "This module deploys a Kubernetes Configuration Flux Configuration.",
@@ -21126,6 +21083,13 @@
                       "nullable": true,
                       "metadata": {
                         "description": "Conditional. Parameters to reconcile to the GitRepository source kind type. Required if `sourceKind` is `Bucket`."
+                      }
+                    },
+                    "azureBlob": {
+                      "type": "object",
+                      "nullable": true,
+                      "metadata": {
+                        "description": "Conditional. Parameters to reconcile to the AzureBlob source kind type. Required if `sourceKind` is `AzureBlob`."
                       }
                     },
                     "configurationProtectedSettings": {
@@ -21168,7 +21132,8 @@
                       "type": "string",
                       "allowedValues": [
                         "Bucket",
-                        "GitRepository"
+                        "GitRepository",
+                        "AzureBlob"
                       ],
                       "metadata": {
                         "description": "Required. Source Kind to pull the configuration data from."
@@ -21186,8 +21151,8 @@
                     "avmTelemetry": {
                       "condition": "[parameters('enableTelemetry')]",
                       "type": "Microsoft.Resources/deployments",
-                      "apiVersion": "2023-07-01",
-                      "name": "[format('46d3xbcp.res.kubernetesconfiguration-fluxconfig.{0}.{1}', replace('0.3.1', '.', '-'), substring(uniqueString(deployment().name, parameters('location')), 0, 4))]",
+                      "apiVersion": "2024-03-01",
+                      "name": "[format('46d3xbcp.res.kubernetesconfiguration-fluxconfig.{0}.{1}', replace('-..--..-', '.', '-'), substring(uniqueString(deployment().name, parameters('location')), 0, 4))]",
                       "properties": {
                         "mode": "Incremental",
                         "template": {
@@ -21211,11 +21176,12 @@
                     },
                     "fluxConfiguration": {
                       "type": "Microsoft.KubernetesConfiguration/fluxConfigurations",
-                      "apiVersion": "2023-05-01",
+                      "apiVersion": "2024-04-01-preview",
                       "scope": "[format('Microsoft.ContainerService/managedClusters/{0}', parameters('clusterName'))]",
                       "name": "[parameters('name')]",
                       "properties": {
                         "bucket": "[parameters('bucket')]",
+                        "azureBlob": "[parameters('azureBlob')]",
                         "configurationProtectedSettings": "[parameters('configurationProtectedSettings')]",
                         "gitRepository": "[parameters('gitRepository')]",
                         "kustomizations": "[parameters('kustomizations')]",
@@ -21295,7 +21261,7 @@
       ]
     },
     {
-      "condition": "[not(parameters('enableBackup'))]",
+      "condition": "[not(variables('configuration').features.enableBackup)]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "[format('{0}-storage-acl', variables('configuration').name)]",

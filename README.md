@@ -3,7 +3,7 @@
 This is a sample project for deploying a production compliant cluster running instances of elastic search that adheres to the [best practices](https://learn.microsoft.com/en-us/azure/aks/best-practices) of Azure Kubernetes Service (AKS).
 
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fdanielscholl%2Fcluster-paas%2Fmain%2Fazuredeploy.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fdanielscholl%2Felastic-cluster%2Fmain%2Fazuredeploy.json)
 
 
 ### Best Practices for Cluster Security and Upgrades.
