@@ -1,0 +1,70 @@
+{{- $elasticInstances := .Values.elasticInstances | default 1 | int }}
+{{- range $i := until $elasticInstances }}
+---
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: kibana-{{ $i }}
+  namespace: {{ $.Release.Namespace }}
+  annotations:
+    kibana.k8s.elastic.co/skip-auth-config: "true" # Disable service account auth.
+spec:
+  version: {{ $.Values.elasticVersion }}
+  # elasticsearchRef:
+  #   name: elasticsearch-{{ $i }}
+  config:
+    elasticsearch.hosts: "http://elasticsearch-{{ $i }}-es-http.{{ $.Release.Namespace }}.svc.cluster.local:9200"
+    elasticsearch.username: "${ELASTICSEARCH_USERNAME}"
+    elasticsearch.password: "${ELASTICSEARCH_PASSWORD}"
+    xpack.encryptedSavedObjects.encryptionKey: "${XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY}"
+  count: 1
+  podTemplate:
+    spec:
+      initContainers:
+      - name: health-check
+        image: mcr.microsoft.com/cbl-mariner/base/core:2.0
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          tdnf install -y curl jq && \
+          while true; do
+            health_status=$(curl -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" -k -s "http://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200/_cluster/health" | jq -r '.status')
+            if [ "$health_status" = "green" ]; then
+              echo "Cluster health is green."
+              exit 0
+            fi
+            echo "Cluster health is $health_status. Waiting for it to be green..."
+            sleep 30
+          done
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - name: es-basic-auth
+          mountPath: /mnt/elasticsearch-es-elastic-user
+      containers:
+        - name: kibana
+          env:
+            - name: ELASTICSEARCH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: username-{{ $i }}
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: password-{{ $i }}
+            - name: XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: key-{{ $i }}
+      volumes:
+      - name: es-basic-auth  # Default credentials for elastic.
+        secret:
+          secretName: elasticsearch-{{ $i }}-es-elastic-user
+{{- end }}

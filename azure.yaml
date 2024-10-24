@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.jsonname: cluster-pass
+metadata:
+  template: cluster-pass@0.0.1
+infra:
+  provider: bicep
+  path: bicep
+  # azd config set alpha.deployment.stacks on
+  deploymentStacks:
+    actionOnUnmanage: 
+      resourceGroups: delete      # delete or detach
+      resources: delete           # delete or detach
+hooks:
+  preprovision:
+    interactive: true
+    continueOnError: false
+    shell: pwsh
+    run: |
+      $objectId = az ad signed-in-user show --query id --output tsv
+      azd env set ENTRA_USER_OID $objectId

@@ -1,0 +1,22 @@
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+fullnameOverride: my-namespace
+
+################################################################################
+# Specify the azure environment specific values
+#
+azure:
+  enabled: true
+  tenantId: <tenant_id>
+  clientId: <managed_identity_clientid>
+  keyvaultName: <keyvault_name>
+
+################################################################################
+# Specify the resource limits
+#
+resourceLimits:
+  defaultCpuRequests: "0.5"
+  defaultMemoryRequests: "4Gi"
+  defaultCpuLimits: "1"
+  defaultMemoryLimits: "4Gi"

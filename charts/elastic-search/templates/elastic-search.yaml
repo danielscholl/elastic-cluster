@@ -1,0 +1,45 @@
+{{- $elasticInstances := .Values.elasticInstances | default 1 | int }}
+{{- range $i := until $elasticInstances }}
+---
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearch-{{ $i }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  version: {{ $.Values.elasticVersion }}
+  http:
+    tls:
+      selfSignedCertificate:
+        disabled: true
+    service:
+      spec:
+        type: ClusterIP
+  nodeSets:
+    - name: default
+      count: 1
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: {{ $.Values.storageSize }}
+            storageClassName: {{ $.Values.storageClass | default "managed-premium" }}
+      config:
+        node.roles: [ "master", "data", "ingest" ]
+        node.store.allow_mmap: false
+      podTemplate:
+        spec:
+          serviceAccountName: workload-identity-sa  # Specify the service account for authentication
+          containers:
+            - name: elasticsearch
+              # Remove the ES_JAVA_OPTS environment variable
+              # env:
+              #   - name: ES_JAVA_OPTS
+              #     value: "-Xms1g -Xmx1g"
+              # If you need to set other environment variables, you can keep the 'env' section
+              # and just remove the ES_JAVA_OPTS entry
+{{- end }}

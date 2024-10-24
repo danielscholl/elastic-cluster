@@ -1,0 +1,13 @@
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+fullnameOverride: elastic-search
+
+azure:
+  configEndpoint: "https://el-config.azconfig.io"
+
+elasticInstances: 1
+elasticVersion: "8.15.3"
+storageSize: "30Gi"
+storageClass: "managed-premium"
+
