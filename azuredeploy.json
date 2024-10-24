@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "8932612983057824843"
+      "templateHash": "8719820614756287963"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -60,6 +60,13 @@
         "description": "Number of Instances"
       }
     },
+    "enableBackup": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable AKS Backup"
+      }
+    },
     "dateStamp": {
       "type": "string",
       "defaultValue": "[utcNow()]",
@@ -107,7 +114,7 @@
         "enableMesh": false,
         "enablePaasPool": false,
         "enableStampTest": false,
-        "enableBackup": false
+        "enableBackup": "[parameters('enableBackup')]"
       }
     },
     "rg_unique_id": "[format('{0}{1}', replace(variables('configuration').name, '-', ''), uniqueString(resourceGroup().id, variables('configuration').name))]",
