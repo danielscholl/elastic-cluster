@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "7337170390647024266"
+      "templateHash": "7686753509255556287"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -30,13 +30,6 @@
       ],
       "metadata": {
         "description": "The size of the VM to use for the cluster."
-      }
-    },
-    "userObjectId": {
-      "type": "securestring",
-      "defaultValue": "",
-      "metadata": {
-        "description": "The object ID of a user to assign as cluster admin."
       }
     },
     "elasticVersion": {
@@ -73,7 +66,7 @@
       {
         "name": "elasticSecrets",
         "count": "[length(range(0, parameters('instances')))]",
-        "input": "[createArray(createObject('secretName', format('elastic-username-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', 'elastic-user'), createObject('secretName', format('elastic-password-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', substring(uniqueString(resourceGroup().id, parameters('userObjectId'), parameters('location'), format('saltpass{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')])), 0, 13)), createObject('secretName', format('elastic-key-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', substring(format('{0}{1}{2}', variables('baseElasticKey'), variables('baseElasticKey'), variables('baseElasticKey')), 0, 32)))]"
+        "input": "[createArray(createObject('secretName', format('elastic-username-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', 'elastic-user'), createObject('secretName', format('elastic-password-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', substring(uniqueString(resourceGroup().id, variables('configuration').userObjectId, parameters('location'), format('saltpass{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')])), 0, 13)), createObject('secretName', format('elastic-key-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', substring(format('{0}{1}{2}', variables('baseElasticKey'), variables('baseElasticKey'), variables('baseElasticKey')), 0, 32)))]"
       }
     ],
     "configuration": {
@@ -108,7 +101,8 @@
         "enablePaasPool": false,
         "enableStampTest": false,
         "enableBackup": true
-      }
+      },
+      "userObjectId": ""
     },
     "rg_unique_id": "[format('{0}{1}', replace(variables('configuration').name, '-', ''), uniqueString(resourceGroup().id, variables('configuration').name))]",
     "federatedIdentityCredentials": [
@@ -131,7 +125,7 @@
         "secretValue": "[subscription().subscriptionId]"
       }
     ],
-    "baseElasticKey": "[format('{0}{1}', uniqueString(resourceGroup().id, parameters('userObjectId'), parameters('location')), uniqueString(subscription().id, deployment().name))]",
+    "baseElasticKey": "[format('{0}{1}', uniqueString(resourceGroup().id, variables('configuration').userObjectId, parameters('location')), uniqueString(subscription().id, deployment().name))]",
     "vaultSecrets": "[union(variables('staticSecrets'), flatten(variables('elasticSecrets')))]",
     "configMaps": {
       "appConfigTemplate": "values.yaml: |\n  serviceAccount:\n    create: false\n    name: \"workload-identity-sa\"\n  azure:\n    tenantId: {0}\n    clientId: {1}\n    configEndpoint: {2}\n    keyvaultUri: {3}\n    keyvaultName: {4}\n  iterateCount: {5}\n  "
@@ -2713,7 +2707,7 @@
             ]
           },
           "roleAssignments": {
-            "value": "[concat(if(empty(parameters('userObjectId')), createArray(), createArray(createObject('roleDefinitionIdOrName', 'Azure Kubernetes Service RBAC Cluster Admin', 'principalId', parameters('userObjectId'), 'principalType', 'User'))), createArray(createObject('roleDefinitionIdOrName', 'Azure Kubernetes Service RBAC Cluster Admin', 'principalId', reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.principalId.value, 'principalType', 'ServicePrincipal'), createObject('roleDefinitionIdOrName', 'Kubernetes Agentless Operator', 'principalId', reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.principalId.value, 'principalType', 'ServicePrincipal')))]"
+            "value": "[concat(if(empty(variables('configuration').userObjectId), createArray(), createArray(createObject('roleDefinitionIdOrName', 'Azure Kubernetes Service RBAC Cluster Admin', 'principalId', variables('configuration').userObjectId, 'principalType', 'User'))), createArray(createObject('roleDefinitionIdOrName', 'Azure Kubernetes Service RBAC Cluster Admin', 'principalId', reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.principalId.value, 'principalType', 'ServicePrincipal'), createObject('roleDefinitionIdOrName', 'Kubernetes Agentless Operator', 'principalId', reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.principalId.value, 'principalType', 'ServicePrincipal')))]"
           },
           "networkPlugin": {
             "value": "azure"
@@ -2793,6 +2787,9 @@
           "enableNodeAutoProvisioning": {
             "value": true
           },
+          "nodeResourceGroupLockDown": {
+            "value": true
+          },
           "aksServicePrincipalProfile": {
             "value": {
               "clientId": "msi"
@@ -2832,12 +2829,13 @@
                 "securityProfile": {
                   "sshAccess": "Disabled"
                 },
-                "osType": "Linux"
+                "osType": "Linux",
+                "osSKU": "AzureLinux"
               }
             ]
           },
           "agentPools": {
-            "value": "[concat(createArray(createObject('name', 'defaultpool', 'mode', 'User', 'vmSize', variables('configuration').cluster.vmSize, 'count', 1, 'securityProfile', createObject('sshAccess', 'Disabled'), 'osType', 'Linux')), if(variables('configuration').features.enablePaasPool, createArray(createObject('name', 'paaspool', 'mode', 'User', 'vmSize', variables('configuration').cluster.vmSize, 'count', 1, 'securityProfile', createObject('sshAccess', 'Disabled'), 'osType', 'Linux', 'nodeTaints', createArray('app=cluster-paas:NoSchedule'), 'nodeLabels', createObject('app', 'cluster-paas'))), createArray()))]"
+            "value": "[concat(createArray(createObject('name', 'defaultpool', 'mode', 'User', 'vmSize', variables('configuration').cluster.vmSize, 'count', 1, 'securityProfile', createObject('sshAccess', 'Disabled'), 'osType', 'Linux', 'osSKU', 'AzureLinux')), if(variables('configuration').features.enablePaasPool, createArray(createObject('name', 'paaspool', 'mode', 'User', 'vmSize', variables('configuration').cluster.vmSize, 'count', 1, 'securityProfile', createObject('sshAccess', 'Disabled'), 'osType', 'Linux', 'osSKU', 'AzureLinux', 'nodeTaints', createArray('app=cluster-paas:NoSchedule'), 'nodeLabels', createObject('app', 'cluster-paas'))), createArray()))]"
           },
           "enableAzureDefender": {
             "value": true
@@ -2863,7 +2861,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "5487381612119365065"
+              "templateHash": "16753394696137103767"
             },
             "name": "Azure Kubernetes Service (AKS) Managed Clusters",
             "description": "This module deploys an Azure Kubernetes Service (AKS) Managed Cluster."
@@ -3793,6 +3791,13 @@
                 "description": "Optional. Name of the resource group containing agent pool nodes."
               }
             },
+            "nodeResourceGroupLockDown": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Optional. If set to true, the node resource group will be locked down to prevent accidental deletion."
+              }
+            },
             "authorizedIPRanges": {
               "type": "array",
               "nullable": true,
@@ -4527,6 +4532,9 @@
                 "enableRBAC": "[parameters('enableRBAC')]",
                 "disableLocalAccounts": "[parameters('disableLocalAccounts')]",
                 "nodeResourceGroup": "[parameters('nodeResourceGroup')]",
+                "nodeResourceGroupProfile": {
+                  "restrictionLevel": "[if(parameters('nodeResourceGroupLockDown'), 'ReadOnly', 'Unrestricted')]"
+                },
                 "enablePodSecurityPolicy": "[parameters('enablePodSecurityPolicy')]",
                 "workloadAutoScalerProfile": {
                   "keda": {
@@ -14559,7 +14567,7 @@
             "value": false
           },
           "allowSharedKeyAccess": {
-            "value": "[variables('configuration').features.enableBackup]"
+            "value": false
           },
           "publicNetworkAccess": {
             "value": "Enabled"

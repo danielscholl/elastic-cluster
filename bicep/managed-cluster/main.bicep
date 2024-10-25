@@ -133,6 +133,9 @@ param disableLocalAccounts bool = false
 @description('Optional. Name of the resource group containing agent pool nodes.')
 param nodeResourceGroup string = '${resourceGroup().name}_aks_${name}_nodes'
 
+@description('Optional. If set to true, the node resource group will be locked down to prevent accidental deletion.')
+param nodeResourceGroupLockDown bool = false
+
 @description('Optional. IP ranges are specified in CIDR format, e.g. 137.117.106.88/29. This feature is not compatible with clusters that use Public IP Per Node, or clusters that are using a Basic Load Balancer.')
 param authorizedIPRanges array?
 
@@ -649,6 +652,9 @@ resource managedCluster 'Microsoft.ContainerService/managedClusters@2024-04-02-p
     enableRBAC: enableRBAC
     disableLocalAccounts: disableLocalAccounts
     nodeResourceGroup: nodeResourceGroup
+    nodeResourceGroupProfile: {
+      restrictionLevel: nodeResourceGroupLockDown ? 'ReadOnly' : 'Unrestricted'
+    }
     enablePodSecurityPolicy: enablePodSecurityPolicy
     workloadAutoScalerProfile: {
       keda: {

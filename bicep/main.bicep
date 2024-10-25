@@ -16,11 +16,6 @@ param location string = resourceGroup().location
 ])
 param vmSize string = 'Standard_DS3_v2'
 
-@description('The object ID of a user to assign as cluster admin.')
-@secure()
-param userObjectId string = ''
-
-
 @allowed([
   '8.15.3'
   '8.14.3'
@@ -72,6 +67,7 @@ var configuration = {
     enableStampTest: false
     enableBackup: true
   }
+  userObjectId: ''  // Bypass for creation of the userObjectId variable.
 }
 
 @description('Unique ID for the resource group')
@@ -163,10 +159,10 @@ module managedCluster './managed-cluster/main.bicep' = {
 
     roleAssignments: concat(
       // Conditionally add the userObjectId role assignment
-      empty(userObjectId) ? [] : [
+      empty(configuration.userObjectId) ? [] : [
         {
           roleDefinitionIdOrName: 'Azure Kubernetes Service RBAC Cluster Admin'
-          principalId: userObjectId
+          principalId: configuration.userObjectId
           principalType: 'User'
         }
       ],
@@ -212,6 +208,7 @@ module managedCluster './managed-cluster/main.bicep' = {
     enableStorageProfileBlobCSIDriver: true    
     webApplicationRoutingEnabled: true
     enableNodeAutoProvisioning: true
+    nodeResourceGroupLockDown: true
     aksServicePrincipalProfile: {
       clientId: 'msi'
     }
@@ -245,6 +242,7 @@ module managedCluster './managed-cluster/main.bicep' = {
           sshAccess: 'Disabled'
         }
         osType: 'Linux'
+        osSKU: 'AzureLinux'
       }
     ]
 
@@ -260,6 +258,7 @@ module managedCluster './managed-cluster/main.bicep' = {
           sshAccess: 'Disabled'
         }
         osType: 'Linux'
+        osSKU: 'AzureLinux'
       }
     ], configuration.features.enablePaasPool ? [
       {
@@ -271,6 +270,7 @@ module managedCluster './managed-cluster/main.bicep' = {
           sshAccess: 'Disabled'
         }
         osType: 'Linux'
+        osSKU: 'AzureLinux'
         nodeTaints: ['app=cluster-paas:NoSchedule']
         nodeLabels: {
           app: 'cluster-paas'
@@ -505,7 +505,7 @@ var staticSecrets = [
   }
 ]
 
-var baseElasticKey = '${uniqueString(resourceGroup().id, userObjectId, location)}${uniqueString(subscription().id, deployment().name)}'
+var baseElasticKey = '${uniqueString(resourceGroup().id, configuration.userObjectId, location)}${uniqueString(subscription().id, deployment().name)}'
 
 // Elastic secrets, flattened to individual objects
 var elasticSecrets = [for i in range(0, instances): [
@@ -515,7 +515,7 @@ var elasticSecrets = [for i in range(0, instances): [
   }
   {
     secretName: 'elastic-password-${i}'
-    secretValue: substring(uniqueString(resourceGroup().id, userObjectId, location, 'saltpass${i}'), 0, 13)
+    secretValue: substring(uniqueString(resourceGroup().id, configuration.userObjectId, location, 'saltpass${i}'), 0, 13)
   }
   {
     secretName: 'elastic-key-${i}'
@@ -671,7 +671,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
     ]
 
     allowBlobPublicAccess: false
-    allowSharedKeyAccess: configuration.features.enableBackup
+    allowSharedKeyAccess: false
     publicNetworkAccess: 'Enabled'
 
     networkAcls: {
@@ -803,7 +803,7 @@ module backupExtension './aks_backup_extension.bicep' = if (configuration.featur
   }
 }
 
-// // Had to use a deployment script to create the trusted role binding as this is only a cli command.
+// Had to use a deployment script to create the trusted role binding as this is only a cli command.
 module trustedRoleBinding 'br/public:avm/res/resources/deployment-script:0.4.0' = if (configuration.features.enableBackup) {
   name: 'aksTrustedRoleBindingDeploymentScript'
   

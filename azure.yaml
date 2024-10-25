@@ -5,10 +5,10 @@ infra:
   provider: bicep
   path: bicep
   # azd config set alpha.deployment.stacks on
-  deploymentStacks:
-    actionOnUnmanage: 
-      resourceGroups: delete      # delete or detach
-      resources: delete           # delete or detach
+  # deploymentStacks:
+  #   actionOnUnmanage: 
+  #     resourceGroups: delete      # delete or detach
+  #     resources: delete           # delete or detach
 hooks:
   preprovision:
     interactive: true
