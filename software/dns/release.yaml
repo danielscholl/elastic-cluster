@@ -1,0 +1,31 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: external-dns
+  namespace: kube-system
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: external-dns
+      sourceRef:
+        kind: HelmRepository
+        name: bitnami
+        namespace: flux-system
+      # version: 6.5.1  # Specify a chart version or omit to get the latest
+  values:
+    provider: azure  # Replace with your DNS provider, such as aws, gcp, cloudflare
+    azure:
+      subscriptionID: "<YOUR_AZURE_SUBSCRIPTION_ID>"
+      tenantID: "<YOUR_AZURE_TENANT_ID>"
+      clientID: "<YOUR_AZURE_CLIENT_ID>"
+      secretKey: "<YOUR_AZURE_SECRET_KEY>"
+    txtOwnerId: "my-cluster"
+    domainFilters:  # Optional: filter DNS zones that external-dns will manage
+      - "example.com"
+    serviceAccount:
+      create: true
+      name: external-dns
+    rbac:
+      create: true

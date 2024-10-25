@@ -17,9 +17,6 @@ param location string = resourceGroup().location
 @description('Optional. The name of the storage account to be used.')
 param storageAccountName string = ''
 
-// @description('Optional. The managed identity for deployment script.')
-// param managedIdentityId string = ''
-
 @description('Optional. Configuration settings that are sensitive, as name-value pairs for configuring this extension.')
 @secure()
 param configurationProtectedSettings object?
@@ -144,3 +141,12 @@ output resourceId string = extension.id
 
 @description('The name of the resource group the extension was deployed into.')
 output resourceGroupName string = resourceGroup().name
+
+
+type managedIdentitiesType = {
+  @description('Optional. Enables system assigned managed identity on the resource.')
+  systemAssigned: bool?
+
+  @description('Optional. The resource ID(s) to assign to the resource.')
+  userAssignedResourcesIds: string[]?
+}?

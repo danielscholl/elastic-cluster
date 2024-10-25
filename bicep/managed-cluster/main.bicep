@@ -59,6 +59,9 @@ param loadBalancerSku string = 'standard'
 @description('Optional. Outbound IP Count for the Load balancer.')
 param managedOutboundIPCount int = 0
 
+@description('Optional. Outbound IP Resource IDs.')
+param outboundIPResourceIds array = []
+
 @description('Optional. The type of the managed inbound Load Balancer BackendPool.')
 @allowed([
   'NodeIP'
@@ -678,6 +681,13 @@ resource managedCluster 'Microsoft.ContainerService/managedClusters@2024-04-02-p
         managedOutboundIPs: managedOutboundIPCount != 0
           ? {
               count: managedOutboundIPCount
+            }
+          : null
+          outboundIPs: !empty(outboundIPResourceIds)
+          ? {
+              publicIPs: map(outboundIPResourceIds, id => {
+                id: id
+              })
             }
           : null
         effectiveOutboundIPs: []

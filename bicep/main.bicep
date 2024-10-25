@@ -6,14 +6,19 @@ metadata description = 'This deploys a managed Kubernetes cluster.'
 @description('Specify the Azure region to place the application definition.')
 param location string = resourceGroup().location
 
+@description('Enable Software from Azure Blob Storage (Requires Storage Account Key Access).')
+param enableBlobSoftware bool = false
+
+@description('Enable Backup to Backup Vaults (Requires Storage Account Key Access).')
+param enableAKSBackup bool = false
+
 @description('The size of the VM to use for the cluster.')
 @allowed([
+  'Standard_D4lds_v5'
   'Standard_D4s_v3'
-  'Standard_D4_v3'
-  'Standard_DS2_v2'
   'Standard_DS3_v2'
 ])
-param vmSize string = 'Standard_DS3_v2'
+param vmSize string = 'Standard_D4s_v3'
 
 @allowed([
   '8.15.3'
@@ -27,6 +32,9 @@ param elasticVersion string = '8.15.3'
 
 @description('Number of Instances')
 param instances int = 1
+
+@description('Optional. DNS Zone Resource ID.')
+param dnsZoneResourceId string = ''
 
 @description('Date Stamp - Used for sentinel in configuration store.')
 param dateStamp string = utcNow()
@@ -60,13 +68,12 @@ var configuration = {
   }
   features: {
     enableStampElastic: true
-    enablePrivateSoftware: false
+    enablePrivateSoftware: enableBlobSoftware
     enableMesh: false
     enablePaasPool: false
     enableStampTest: false
-    enableBackup: true
+    enableBackup: enableAKSBackup
   }
-  userObjectId: ''  // Bypass for creation of the userObjectId variable.
 }
 
 @description('Unique ID for the resource group')
@@ -156,29 +163,19 @@ module managedCluster './managed-cluster/main.bicep' = {
       }
     ]
 
-    roleAssignments: concat(
-      // Conditionally add the userObjectId role assignment
-      empty(configuration.userObjectId) ? [] : [
-        {
-          roleDefinitionIdOrName: 'Azure Kubernetes Service RBAC Cluster Admin'
-          principalId: configuration.userObjectId
-          principalType: 'User'
-        }
-      ],
-      [
-        {
-          roleDefinitionIdOrName: 'Azure Kubernetes Service RBAC Cluster Admin'
-          principalId: identity.outputs.principalId
-          principalType: 'ServicePrincipal'
-        }
-        // Role Assignment required for the trusted role binding deployment script to execute.
-        {
-          roleDefinitionIdOrName: 'Kubernetes Agentless Operator'
-          principalId: identity.outputs.principalId
-          principalType: 'ServicePrincipal'
-        }
-      ]
-    )
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: 'Azure Kubernetes Service RBAC Cluster Admin'
+        principalId: identity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      // Role Assignment required for the trusted role binding deployment script to execute.
+      {
+        roleDefinitionIdOrName: 'Kubernetes Agentless Operator'
+        principalId: identity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+    ]
 
     // These are all the things that are required for the Automatic SKU
     networkPlugin: 'azure'
@@ -206,6 +203,7 @@ module managedCluster './managed-cluster/main.bicep' = {
     enableStorageProfileSnapshotController: true
     enableStorageProfileBlobCSIDriver: true    
     webApplicationRoutingEnabled: true
+    dnsZoneResourceId: !empty(dnsZoneResourceId) ? dnsZoneResourceId : null
     enableNodeAutoProvisioning: true
     nodeResourceGroupLockDown: true
     aksServicePrincipalProfile: {
@@ -504,7 +502,7 @@ var staticSecrets = [
   }
 ]
 
-var baseElasticKey = '${uniqueString(resourceGroup().id, configuration.userObjectId, location)}${uniqueString(subscription().id, deployment().name)}'
+var baseElasticKey = '${uniqueString(resourceGroup().id, location)}${uniqueString(subscription().id, deployment().name)}'
 
 // Elastic secrets, flattened to individual objects
 var elasticSecrets = [for i in range(0, instances): [
@@ -514,7 +512,7 @@ var elasticSecrets = [for i in range(0, instances): [
   }
   {
     secretName: 'elastic-password-${i}'
-    secretValue: substring(uniqueString(resourceGroup().id, configuration.userObjectId, location, 'saltpass${i}'), 0, 13)
+    secretValue: substring(uniqueString(resourceGroup().id, location, 'saltpass${i}'), 0, 13)
   }
   {
     secretName: 'elastic-key-${i}'
@@ -670,7 +668,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
     ]
 
     allowBlobPublicAccess: false
-    allowSharedKeyAccess: false
+    allowSharedKeyAccess: configuration.features.enablePrivateSoftware
     publicNetworkAccess: 'Enabled'
 
     networkAcls: {
@@ -804,7 +802,7 @@ module backupExtension './aks_backup_extension.bicep' = if (configuration.featur
 
 // Had to use a deployment script to create the trusted role binding as this is only a cli command.
 module trustedRoleBinding 'br/public:avm/res/resources/deployment-script:0.4.0' = if (configuration.features.enableBackup) {
-  name: 'aksTrustedRoleBindingDeploymentScript'
+  name: '${configuration.name}-script-trustedRoleBinding'
   
   params: {
     kind: 'AzureCLI'
@@ -871,16 +869,13 @@ module gitOpsUpload './software-upload/main.bicep' = {
   ]
 }
 
-// AVM doesn't support azure blob as a gitops source yet we used a fork of the module to support it.
-module flux './flux-extension/main.bicep' = {
-  name: '${configuration.name}-gitops'
+module fluxExtension 'br/public:avm/res/kubernetes-configuration/extension:0.3.4' = {
+  name: '${configuration.name}-flux-extension'
   params: {
-    // Required parameters
     clusterName: managedCluster.outputs.name
     location: location
     extensionType: 'microsoft.flux'
-    name: 'flux'
-    
+    name: 'flux'    
     releaseNamespace: 'flux-system'
     releaseTrain: 'Stable'
 
@@ -893,71 +888,161 @@ module flux './flux-extension/main.bicep' = {
       'image-automation-controller.enabled': 'false'
       'image-reflector-controller.enabled': 'false'
     }
-    fluxConfigurations: [
-      {
-        namespace: 'flux-system'
-        name: 'flux-system'
-        scope: 'cluster'
-        suspend: false
-        sourceKind: configuration.features.enablePrivateSoftware == true ? 'AzureBlob' : 'GitRepository'
-        ...(configuration.features.enablePrivateSoftware ? {
-          azureBlob: {
-            containerName: 'gitops'
-            url: storageAccount.outputs.primaryBlobEndpoint
-          }
-        } : {
-          gitRepository: {
-            repositoryRef: {
-              branch: 'main'
-            }
-            sshKnownHosts: ''
-            syncIntervalInSeconds: 300
-            timeoutInSeconds: 300
-            url: 'https://github.com/danielscholl/cluster-paas'
-          }
-        })
-        kustomizations: {
-          global: {
-            path: './software/global'
-            dependsOn: []
-            syncIntervalInSeconds: 300
-            timeoutInSeconds: 300
-            validation: 'none'
-            prune: true
-          }
-          ...(configuration.features.enableStampTest ? {
-            stamptest: {
-              path: './software/stamp-test'
-              dependsOn: ['global']
-              syncIntervalInSeconds: 300
-              timeoutInSeconds: 300
-              validation: 'none'
-              prune: true
-            }
-          } : {})
-          ...(configuration.features.enableStampElastic ? {
-            stampelastic: {
-              path: './software/stamp-elastic'
-              dependsOn: ['global']
-              syncIntervalInSeconds: 300
-              timeoutInSeconds: 300
-              validation: 'none'
-              prune: true
-            }
-          } : {})
-        }
+  }
+}
+
+// AVM doesn't support azure blob as a gitops source yet we used a fork of the module to support it.
+module fluxConfiguration './flux-configuration/main.bicep' = {
+  name: '${configuration.name}-flux-configuration'
+  params: {
+    name: 'flux-system'
+    clusterName: managedCluster.outputs.name
+    location: location
+
+    namespace: 'flux-system'
+    scope: 'cluster'
+
+    suspend: false
+    sourceKind: configuration.features.enablePrivateSoftware ? 'AzureBlob' : 'GitRepository'
+
+    gitRepository: !configuration.features.enablePrivateSoftware ? {
+      repositoryRef: {
+        branch: 'main'
       }
-    ]
+      sshKnownHosts: ''
+      syncIntervalInSeconds: 300
+      timeoutInSeconds: 300
+      url: 'https://github.com/danielscholl/cluster-paas'
+    } : null
+    azureBlob: configuration.features.enablePrivateSoftware ? {
+      containerName: 'gitops'
+      url: storageAccount.outputs.primaryBlobEndpoint
+      storageAccountName: storageAccount.outputs.name
+    } : null
+
+    kustomizations: {
+      global: {
+        path: './software/global'
+        dependsOn: []
+        syncIntervalInSeconds: 300
+        timeoutInSeconds: 300
+        validation: 'none'
+        prune: true
+      }
+      ...(configuration.features.enableStampTest ? {
+        stamptest: {
+          path: './software/stamp-test'
+          dependsOn: ['global']
+          syncIntervalInSeconds: 300
+          timeoutInSeconds: 300
+          validation: 'none'
+          prune: true
+        }
+      } : {})
+      ...(configuration.features.enableStampElastic ? {
+        stampelastic: {
+          path: './software/stamp-elastic'
+          dependsOn: ['global']
+          syncIntervalInSeconds: 300
+          timeoutInSeconds: 300
+          validation: 'none'
+          prune: true
+        }
+      } : {})
+    }
   }
   dependsOn: [
-    managedCluster
-    gitOpsUpload
-    keyvault
-    registry
-    identity
-    storageAccount
+    fluxExtension
   ]
 }
+
+// AVM doesn't support azure blob as a gitops source yet we used a fork of the module to support it.
+// module flux './flux-extension/main.bicep' = {
+//   name: '${configuration.name}-gitops'
+//   params: {
+//     // Required parameters
+//     clusterName: managedCluster.outputs.name
+//     location: location
+//     extensionType: 'microsoft.flux'
+//     name: 'flux'
+    
+//     releaseNamespace: 'flux-system'
+//     releaseTrain: 'Stable'
+
+//     configurationSettings: {
+//       'multiTenancy.enforce': 'false'
+//       'helm-controller.enabled': 'true'
+//       'source-controller.enabled': 'true'
+//       'kustomize-controller.enabled': 'true'
+//       'notification-controller.enabled': 'true'
+//       'image-automation-controller.enabled': 'false'
+//       'image-reflector-controller.enabled': 'false'
+//     }
+//     fluxConfigurations: [
+//       {
+//         namespace: 'flux-system'
+//         name: 'flux-system'
+//         scope: 'cluster'
+//         suspend: false
+//         sourceKind: configuration.features.enablePrivateSoftware == true ? 'AzureBlob' : 'GitRepository'
+//         ...(configuration.features.enablePrivateSoftware ? {
+//           azureBlob: {
+//             containerName: 'gitops'
+//             url: storageAccount.outputs.primaryBlobEndpoint
+//           }
+//         } : {
+//           gitRepository: {
+//             repositoryRef: {
+//               branch: 'main'
+//             }
+//             sshKnownHosts: ''
+//             syncIntervalInSeconds: 300
+//             timeoutInSeconds: 300
+//             url: 'https://github.com/danielscholl/cluster-paas'
+//           }
+//         })
+//         kustomizations: {
+//           global: {
+//             path: './software/global'
+//             dependsOn: []
+//             syncIntervalInSeconds: 300
+//             timeoutInSeconds: 300
+//             validation: 'none'
+//             prune: true
+//           }
+//           ...(configuration.features.enableStampTest ? {
+//             stamptest: {
+//               path: './software/stamp-test'
+//               dependsOn: ['global']
+//               syncIntervalInSeconds: 300
+//               timeoutInSeconds: 300
+//               validation: 'none'
+//               prune: true
+//             }
+//           } : {})
+//           ...(configuration.features.enableStampElastic ? {
+//             stampelastic: {
+//               path: './software/stamp-elastic'
+//               dependsOn: ['global']
+//               syncIntervalInSeconds: 300
+//               timeoutInSeconds: 300
+//               validation: 'none'
+//               prune: true
+//             }
+//           } : {})
+//         }
+//       }
+//     ]
+//   }
+//   dependsOn: [
+//     managedCluster
+//     gitOpsUpload
+//     keyvault
+//     registry
+//     identity
+//     storageAccount
+//   ]
+// }
 
 // Apply network ACL to the storage account  (Backup UI checks think we don't have access to the storage account)
 module storageAcl './storage_acl.bicep' = if (!configuration.features.enableBackup) {
@@ -996,7 +1081,7 @@ values.yaml: |
 
 // Custom module to create the initial config map for the App Configuration Provider
 module appConfigMap './aks-config-map/main.bicep' = {
-  name: '${configuration.name}-cluster-appconfig-configmap'
+  name: '${configuration.name}-configmap'
   params: {
     aksName: managedCluster.outputs.name
     location: location
@@ -1021,7 +1106,7 @@ module appConfigMap './aks-config-map/main.bicep' = {
   }
   dependsOn: [
     managedCluster
-    flux
+    fluxConfiguration
     appConfigExtension
   ]
 }
