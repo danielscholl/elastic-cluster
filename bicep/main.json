@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "7686753509255556287"
+      "templateHash": "6065900969816454230"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -22,7 +22,6 @@
       "type": "string",
       "defaultValue": "Standard_DS3_v2",
       "allowedValues": [
-        "Standard_D2s_v3",
         "Standard_D4s_v3",
         "Standard_D4_v3",
         "Standard_DS2_v2",

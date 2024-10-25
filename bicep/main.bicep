@@ -8,7 +8,6 @@ param location string = resourceGroup().location
 
 @description('The size of the VM to use for the cluster.')
 @allowed([
-  'Standard_D2s_v3'
   'Standard_D4s_v3'
   'Standard_D4_v3'
   'Standard_DS2_v2'
