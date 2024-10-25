@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "4471074851121404029"
+      "templateHash": "3088715944516628284"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -19871,9 +19871,7 @@
           "storageAccountName": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name)), '2022-09-01').outputs.name.value]"
           },
-          "backupVaultName": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-backup', variables('configuration').name)), '2022-09-01').outputs.name.value]"
-          }
+          "backupVaultName": "[if(variables('configuration').features.enableBackup, createObject('value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-backup', variables('configuration').name)), '2022-09-01').outputs.name.value), createObject('value', ''))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -20067,7 +20065,7 @@
               },
               {
                 "name": "vaultId",
-                "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-backup', variables('configuration').name)), '2022-09-01').outputs.resourceId.value]"
+                "value": "[if(variables('configuration').features.enableBackup, reference(resourceId('Microsoft.Resources/deployments', format('{0}-backup', variables('configuration').name)), '2022-09-01').outputs.resourceId.value, '')]"
               },
               {
                 "name": "clusterName",

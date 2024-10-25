@@ -796,7 +796,7 @@ module backupExtension './aks_backup_extension.bicep' = if (configuration.featur
   params: {
     clusterName: managedCluster.outputs.name
     storageAccountName: storageAccount.outputs.name
-    backupVaultName: backupVault.outputs.name
+    backupVaultName: configuration.features.enableBackup ? backupVault.outputs.name : ''
   }
 }
 
@@ -822,7 +822,7 @@ module trustedRoleBinding 'br/public:avm/res/resources/deployment-script:0.4.0' 
       }
       {
         name: 'vaultId'
-        value: backupVault.outputs.resourceId
+        value: configuration.features.enableBackup ? backupVault.outputs.resourceId : ''
       }
       {
         name: 'clusterName'
