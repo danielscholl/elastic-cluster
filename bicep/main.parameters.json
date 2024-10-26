@@ -8,8 +8,8 @@
       "location": {
         "value": "${AZURE_LOCATION}"
       },
-      "userObjectId": {
-        "value": "${USER_OID}"
+      "enableBlobSoftware": {
+        "value": "${ENABLE_BLOB_SOFTWARE}"
       }
     }
 }

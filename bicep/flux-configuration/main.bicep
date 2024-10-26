@@ -14,6 +14,9 @@ param clusterName string
 @description('Optional. Location for all resources.')
 param location string = resourceGroup().location
 
+@description('Optional. The name of the storage account to be used.')
+param storageAccountName string = ''
+
 @description('Conditional. Parameters to reconcile to the GitRepository source kind type. Required if `sourceKind` is `Bucket`.')
 param bucket object?
 
@@ -32,6 +35,9 @@ param kustomizations object
 
 @description('Required. The namespace to which this configuration is installed to. Maximum of 253 lower case alphanumeric characters, hyphen and period only.')
 param namespace string
+
+@description('Date Stamp - Used for sentinel in configuration store.')
+param dateStamp string = utcNow()
 
 @allowed([
   'cluster'
@@ -74,12 +80,27 @@ resource managedCluster 'Microsoft.ContainerService/managedClusters@2022-07-01' 
   name: clusterName
 }
 
+resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' existing = {
+  name: storageAccountName
+}
+
+var sasProperties = {
+  signedServices: 'b'
+  signedResourceTypes: 'sco'
+  signedPermission: 'rl'
+  signedProtocol: 'https'
+  signedExpiry: dateTimeAdd(dateStamp, 'P1Y')
+}
+var sasToken = storageAccount.listAccountSas('2022-09-01', sasProperties).accountSasToken
+
 resource fluxConfiguration 'Microsoft.KubernetesConfiguration/fluxConfigurations@2024-04-01-preview' = {
   name: name
   scope: managedCluster
   properties: {
     bucket: bucket
-    azureBlob: azureBlob
+    azureBlob: storageAccountName != '' ? (azureBlob ?? {}) != {} ? union(azureBlob ?? {}, { sasToken: sasToken }) : {
+      sasToken: sasToken
+    } : azureBlob
     configurationProtectedSettings: configurationProtectedSettings
     gitRepository: gitRepository
     kustomizations: kustomizations

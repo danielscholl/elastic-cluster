@@ -9,11 +9,3 @@ infra:
   #   actionOnUnmanage: 
   #     resourceGroups: delete      # delete or detach
   #     resources: delete           # delete or detach
-hooks:
-  preprovision:
-    interactive: true
-    continueOnError: false
-    shell: pwsh
-    run: |
-      $objectId = az ad signed-in-user show --query id --output tsv
-      azd env set ENTRA_USER_OID $objectId

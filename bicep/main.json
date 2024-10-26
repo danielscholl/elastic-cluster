@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "3088715944516628284"
+      "templateHash": "11738370217114779176"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -21297,6 +21297,7 @@
           "location": {
             "value": "[parameters('location')]"
           },
+          "storageAccountName": "[if(variables('configuration').features.enablePrivateSoftware, createObject('value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name)), '2022-09-01').outputs.name.value), createObject('value', null()))]",
           "namespace": {
             "value": "flux-system"
           },
@@ -21308,7 +21309,7 @@
           },
           "sourceKind": "[if(variables('configuration').features.enablePrivateSoftware, createObject('value', 'AzureBlob'), createObject('value', 'GitRepository'))]",
           "gitRepository": "[if(not(variables('configuration').features.enablePrivateSoftware), createObject('value', createObject('repositoryRef', createObject('branch', 'main'), 'sshKnownHosts', '', 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'url', 'https://github.com/danielscholl/cluster-paas')), createObject('value', null()))]",
-          "azureBlob": "[if(variables('configuration').features.enablePrivateSoftware, createObject('value', createObject('containerName', 'gitops', 'url', reference(resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name)), '2022-09-01').outputs.primaryBlobEndpoint.value, 'storageAccountName', reference(resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name)), '2022-09-01').outputs.name.value)), createObject('value', null()))]",
+          "azureBlob": "[if(variables('configuration').features.enablePrivateSoftware, createObject('value', createObject('containerName', 'gitops', 'url', reference(resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name)), '2022-09-01').outputs.primaryBlobEndpoint.value)), createObject('value', null()))]",
           "kustomizations": {
             "value": "[shallowMerge(createArray(createObject('global', createObject('path', './software/global', 'dependsOn', createArray(), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), if(variables('configuration').features.enableStampTest, createObject('stamptest', createObject('path', './software/stamp-test', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject()), if(variables('configuration').features.enableStampElastic, createObject('stampelastic', createObject('path', './software/stamp-elastic', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject())))]"
           }
@@ -21321,7 +21322,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "7866905626720137637"
+              "templateHash": "11895437703684465040"
             },
             "name": "Kubernetes Configuration Flux Configurations",
             "description": "This module deploys a Kubernetes Configuration Flux Configuration.",
@@ -21352,6 +21353,13 @@
               "defaultValue": "[resourceGroup().location]",
               "metadata": {
                 "description": "Optional. Location for all resources."
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional. The name of the storage account to be used."
               }
             },
             "bucket": {
@@ -21394,6 +21402,13 @@
                 "description": "Required. The namespace to which this configuration is installed to. Maximum of 253 lower case alphanumeric characters, hyphen and period only."
               }
             },
+            "dateStamp": {
+              "type": "string",
+              "defaultValue": "[utcNow()]",
+              "metadata": {
+                "description": "Date Stamp - Used for sentinel in configuration store."
+              }
+            },
             "scope": {
               "type": "string",
               "allowedValues": [
@@ -21423,6 +21438,15 @@
               }
             }
           },
+          "variables": {
+            "sasProperties": {
+              "signedServices": "b",
+              "signedResourceTypes": "sco",
+              "signedPermission": "rl",
+              "signedProtocol": "https",
+              "signedExpiry": "[dateTimeAdd(parameters('dateStamp'), 'P1Y')]"
+            }
+          },
           "resources": {
             "avmTelemetry": {
               "condition": "[parameters('enableTelemetry')]",
@@ -21450,6 +21474,12 @@
               "apiVersion": "2022-07-01",
               "name": "[parameters('clusterName')]"
             },
+            "storageAccount": {
+              "existing": true,
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2022-09-01",
+              "name": "[parameters('storageAccountName')]"
+            },
             "fluxConfiguration": {
               "type": "Microsoft.KubernetesConfiguration/fluxConfigurations",
               "apiVersion": "2024-04-01-preview",
@@ -21457,7 +21487,7 @@
               "name": "[parameters('name')]",
               "properties": {
                 "bucket": "[parameters('bucket')]",
-                "azureBlob": "[parameters('azureBlob')]",
+                "azureBlob": "[if(not(equals(parameters('storageAccountName'), '')), if(not(equals(coalesce(parameters('azureBlob'), createObject()), createObject())), union(coalesce(parameters('azureBlob'), createObject()), createObject('sasToken', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-09-01', variables('sasProperties')).accountSasToken)), createObject('sasToken', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-09-01', variables('sasProperties')).accountSasToken)), parameters('azureBlob'))]",
                 "configurationProtectedSettings": "[parameters('configurationProtectedSettings')]",
                 "gitRepository": "[parameters('gitRepository')]",
                 "kustomizations": "[parameters('kustomizations')]",
@@ -21467,7 +21497,8 @@
                 "suspend": "[parameters('suspend')]"
               },
               "dependsOn": [
-                "managedCluster"
+                "managedCluster",
+                "storageAccount"
               ]
             }
           },

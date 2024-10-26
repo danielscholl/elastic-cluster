@@ -890,8 +890,7 @@ module fluxExtension 'br/public:avm/res/kubernetes-configuration/extension:0.3.4
     }
   }
 }
-
-// AVM doesn't support azure blob as a gitops source yet we used a fork of the module to support it.
+// AVM doesn't support azure blob as a gitops source yet we used a fork of the module to support it with SAS token.
 module fluxConfiguration './flux-configuration/main.bicep' = {
   name: '${configuration.name}-flux-configuration'
   params: {
@@ -899,12 +898,14 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
     clusterName: managedCluster.outputs.name
     location: location
 
+    // This is the hack to trigger the SAS token to be created.
+    storageAccountName: configuration.features.enablePrivateSoftware ? storageAccount.outputs.name : null
+
     namespace: 'flux-system'
     scope: 'cluster'
-
     suspend: false
     sourceKind: configuration.features.enablePrivateSoftware ? 'AzureBlob' : 'GitRepository'
-
+    
     gitRepository: !configuration.features.enablePrivateSoftware ? {
       repositoryRef: {
         branch: 'main'
@@ -914,10 +915,10 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
       timeoutInSeconds: 300
       url: 'https://github.com/danielscholl/cluster-paas'
     } : null
+    // This is hacked to get the SAS token to be created.
     azureBlob: configuration.features.enablePrivateSoftware ? {
       containerName: 'gitops'
       url: storageAccount.outputs.primaryBlobEndpoint
-      storageAccountName: storageAccount.outputs.name
     } : null
 
     kustomizations: {
