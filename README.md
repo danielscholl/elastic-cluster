@@ -175,25 +175,13 @@ az feature show --namespace Microsoft.ContainerService --name AutomaticSKUPrevie
 When the status reflects *Registered*, refresh the registration of the *Microsoft.ContainerService* resource provider by using the [az provider register](https://learn.microsoft.com/en-us/cli/azure/provider?view=azure-cli-latest#az-provider-register) command:
 
 
-### For Development Work on the project
+#### Important Notes
 
-```bash
-az provider register --namespace Microsoft.ContainerService
-```
+- Ingress with valid certificates and DNS is not yet implemented.
+- AKS Backup instances are not yet configured for backup feature flag.
+- Bugs still exist in Private Software feature flag.
+- Multiple instances of elastic search are not yet supported.
 
-```bash
-## Enable Experimental Features
-azd config set alpha.deployment.stacks on
+> Note: Backup requires Storage Accounts with `Allow Storage Account Key Access` -- Bad Practice.
 
-## Authenticate
-azd auth login
-
-# Initialize Environment
-azd init -e dev 
-
-# Set the feature flag for GitOps source to use GitRepository
-azd config set ENABLE_PRIVATE_SOFTWARE false
-
-# Provisioning
-azd provision
-```
+> Note: Flux Configurations with AzureBlob requires SAS tokens to be used as managed identities are not yet supported using automation and can only work with manual configurations. -- Bad Practice.
