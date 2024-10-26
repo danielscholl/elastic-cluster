@@ -115,7 +115,7 @@ This is a sample project for exploring best practices using a cluster running in
 
     Azure GitOps Configurations are a set of tools and services that enable you to use Git as a single source of truth for your infrastructure and workload applications.
 
-3. [x] Use [Application Configuration Provider](https://learn.microsoft.com/en-us/azure/azure-app-configuration/reference-kubernetes-provider?tabs=default)) to manage feature flags and configuration information.
+3. [x] Use [Application Configuration Provider](https://learn.microsoft.com/en-us/azure/azure-app-configuration/reference-kubernetes-provider?tabs=default) to manage feature flags and configuration information.
 
     Application Configuration Provider is a fully managed feature flag and configuration management service for applications running on AKS.
 
@@ -152,6 +152,12 @@ This is a sample project for exploring best practices using a cluster running in
 - Test Workload (Test Stamp)
 
 - Elastic Search (Elastic Stamp)
+
+- PostgreSql (PostgreSql Stamp) -- Not yet implemented.
+
+- Redis (Redis Stamp) -- Not yet implemented.
+
+- Airflow (Airflow Stamp) -- Not yet implemented.
 
 ## Register the feature flags
 
