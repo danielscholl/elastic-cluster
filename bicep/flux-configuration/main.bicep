@@ -84,23 +84,28 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' existing 
   name: storageAccountName
 }
 
+
+
 var sasProperties = {
   signedServices: 'b'
   signedResourceTypes: 'sco'
-  signedPermission: 'rl'
+  signedPermission: 'rwlacup'
   signedProtocol: 'https'
   signedExpiry: dateTimeAdd(dateStamp, 'P1Y')
 }
 var sasToken = storageAccount.listAccountSas('2022-09-01', sasProperties).accountSasToken
+
+var accountKey = base64(storageAccount.listKeys().keys[0].value)
 
 resource fluxConfiguration 'Microsoft.KubernetesConfiguration/fluxConfigurations@2024-04-01-preview' = {
   name: name
   scope: managedCluster
   properties: {
     bucket: bucket
-    azureBlob: storageAccountName != '' ? (azureBlob ?? {}) != {} ? union(azureBlob ?? {}, { sasToken: sasToken }) : {
-      sasToken: sasToken
-    } : azureBlob
+    azureBlob: azureBlob
+    // azureBlob: storageAccountName != '' ? (azureBlob ?? {}) != {} ? union(azureBlob ?? {}, { sasToken: sasToken }) : {
+    //   sasToken: sasToken
+    // } : azureBlob
     configurationProtectedSettings: configurationProtectedSettings
     gitRepository: gitRepository
     kustomizations: kustomizations

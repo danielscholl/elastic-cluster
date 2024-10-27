@@ -177,41 +177,63 @@ module managedCluster './managed-cluster/main.bicep' = {
       }
     ]
 
-    // These are all the things that are required for the Automatic SKU
+    aksServicePrincipalProfile: {
+      clientId: 'msi'
+    }
+    managedIdentities: {
+      systemAssigned: false  
+      userAssignedResourcesIds: [
+        identity.outputs.resourceId
+      ]
+    }
+
+    // Network Settings
     networkPlugin: 'azure'
     networkPluginMode: 'overlay'
     networkDataplane: 'cilium'
     publicNetworkAccess: 'Enabled'
     outboundType: 'managedNATGateway'
-    enableKeyvaultSecretsProvider: true
-    enableSecretRotation: true
-    enableImageCleaner: true
-    imageCleanerIntervalHours: 168
-    vpaAddon: true
-    kedaAddon: true
-    enableOidcIssuerProfile: true
-    enableWorkloadIdentity: true
-    azurePolicyEnabled: true
-    omsAgentEnabled: true
+    enablePrivateCluster: false
+    dnsZoneResourceId: !empty(dnsZoneResourceId) ? dnsZoneResourceId : null
+
+    // Access Settings
+    disableLocalAccounts: true
     enableRBAC: true
     aadProfileManaged: true
-    enablePrivateCluster: false
-    disableLocalAccounts: true
+    nodeResourceGroupLockDown: true
+
+    // Observability Settings
+    enableAzureDefender: true
+    enableContainerInsights: true
+    monitoringWorkspaceId: logAnalytics.outputs.resourceId
+    enableAzureMonitorProfileMetrics: true
     costAnalysisEnabled: true
+
+    // Ingress Settings
+    webApplicationRoutingEnabled: !configuration.features.enableMesh
+    istioServiceMeshEnabled: configuration.features.enableMesh
+    istioIngressGatewayEnabled: configuration.features.enableMesh
+    istioIngressGatewayType: configuration.features.enableMesh ? 'External' : null
+
+    // Plugin Software
     enableStorageProfileDiskCSIDriver: true
     enableStorageProfileFileCSIDriver: true
     enableStorageProfileSnapshotController: true
     enableStorageProfileBlobCSIDriver: true    
-    webApplicationRoutingEnabled: true
-    dnsZoneResourceId: !empty(dnsZoneResourceId) ? dnsZoneResourceId : null
+    enableKeyvaultSecretsProvider: true
+    enableSecretRotation: true
+    enableImageCleaner: true
+    imageCleanerIntervalHours: 168
+    enableOidcIssuerProfile: true
+    enableWorkloadIdentity: true
+    azurePolicyEnabled: true
+    omsAgentEnabled: true
+    
+    // Auto-Scaling
+    vpaAddon: true
+    kedaAddon: true
     enableNodeAutoProvisioning: true
-    nodeResourceGroupLockDown: true
-    aksServicePrincipalProfile: {
-      clientId: 'msi'
-    }
-    managedIdentities: {
-      systemAssigned: true  
-    }
+    
     maintenanceConfiguration: {
       maintenanceWindow: {
         schedule: {
@@ -229,6 +251,7 @@ module managedCluster './managed-cluster/main.bicep' = {
         startTime: '00:00'
       }
     }
+
     primaryAgentPoolProfile: [
       {
         name: 'systempool'
@@ -274,18 +297,6 @@ module managedCluster './managed-cluster/main.bicep' = {
         }
       }
     ] : [])
-    
-    // These are things that are optional items for this solution.
-    enableAzureDefender: true
-    enableContainerInsights: true
-    monitoringWorkspaceId: logAnalytics.outputs.resourceId
-    enableAzureMonitorProfileMetrics: true
-
-    // Additional Add On Configurations
-    istioServiceMeshEnabled: configuration.features.enableMesh ? true : false
-    istioIngressGatewayEnabled: configuration.features.enableMesh ? true : false
-    istioIngressGatewayType: configuration.features.enableMesh ? 'External' : null
-
   }
 }
 
@@ -329,6 +340,10 @@ var federatedIdentityCredentials = [
   {
     name: 'federated-ns_elastic'
     subject: 'system:serviceaccount:elastic:workload-identity-sa'
+  }
+  {
+    name: 'federated-ns_flux-system'
+    subject: 'system:serviceaccount:flux-system:source-controller'
   }
 ]
 
@@ -854,7 +869,7 @@ module trustedRoleBinding 'br/public:avm/res/resources/deployment-script:0.4.0' 
 /////////////////////////////////////////////////////////////////////
 // Custom deployment script module to upload the gitops software configuration to the storage account.
 module gitOpsUpload './software-upload/main.bicep' = {
-  name: '${configuration.name}-storage-gitops-upload'
+  name: '${configuration.name}-storage-software-upload'
   params: {
     storageAccountName: storageAccount.outputs.name
     location: location
@@ -869,7 +884,8 @@ module gitOpsUpload './software-upload/main.bicep' = {
   ]
 }
 
-module fluxExtension 'br/public:avm/res/kubernetes-configuration/extension:0.3.4' = {
+// AVM doesn't support output of the principalId from the extension module so we have to use a deployment script to get it.
+module fluxExtension './flux-extension/main.bicep' = {
   name: '${configuration.name}-flux-extension'
   params: {
     clusterName: managedCluster.outputs.name
@@ -890,6 +906,62 @@ module fluxExtension 'br/public:avm/res/kubernetes-configuration/extension:0.3.4
     }
   }
 }
+
+module extensionClientId 'br/public:avm/res/resources/deployment-script:0.4.0' = if (configuration.features.enablePrivateSoftware) {
+  name: '${configuration.name}-script-clientId'
+  
+  params: {
+    kind: 'AzureCLI'
+    name: 'aksExtensionClientId'
+    azCliVersion: '2.63.0'
+    location: location
+    managedIdentities: {
+      userAssignedResourcesIds: [
+        identity.outputs.resourceId
+      ]
+    }
+
+    environmentVariables: [
+      {
+        name: 'rgName'
+        value: '${resourceGroup().name}_aks_${managedCluster.outputs.name}_nodes'
+      }
+      {
+        name: 'principalId'
+        value: fluxExtension.outputs.principalId
+      }
+    ]
+    
+    timeout: 'PT30M'
+    retentionInterval: 'PT1H'
+
+    scriptContent: '''
+      az login --identity
+
+      echo "Looking up client ID for $principalId in ResourceGroup $rgName"
+      clientId=$(az identity list --resource-group $rgName --query "[?principalId=='$principalId'] | [0].clientId" -otsv)
+      
+      echo "Found ClientId: $clientId"
+      echo "{\"clientId\":\"$clientId\"}" | jq -c '.' > $AZ_SCRIPTS_OUTPUT_PATH
+    '''
+  }
+  dependsOn: [
+    fluxExtension
+  ]
+}
+
+module fluxExtensionRole './aks_flux_extension_role.bicep' = if (configuration.features.enablePrivateSoftware) {
+  name: '${configuration.name}-flux-extension-role'
+  params: {
+    storageAccountName: storageAccount.outputs.name
+    principalId: fluxExtension.outputs.principalId
+  }
+  dependsOn: [
+    storageAccount
+    extensionClientId
+  ]
+}
+
 // AVM doesn't support azure blob as a gitops source yet we used a fork of the module to support it with SAS token.
 module fluxConfiguration './flux-configuration/main.bicep' = {
   name: '${configuration.name}-flux-configuration'
@@ -919,6 +991,9 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
     azureBlob: configuration.features.enablePrivateSoftware ? {
       containerName: 'gitops'
       url: storageAccount.outputs.primaryBlobEndpoint
+      managedIdentity: {
+        clientId: extensionClientId.outputs.outputs.clientId
+      }
     } : null
 
     kustomizations: {
@@ -952,101 +1027,17 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
       } : {})
     }
   }
-  dependsOn: [
+  dependsOn: configuration.features.enablePrivateSoftware ? [
+    fluxExtension
+    fluxExtensionRole
+  ] :[
     fluxExtension
   ]
 }
 
-// AVM doesn't support azure blob as a gitops source yet we used a fork of the module to support it.
-// module flux './flux-extension/main.bicep' = {
-//   name: '${configuration.name}-gitops'
-//   params: {
-//     // Required parameters
-//     clusterName: managedCluster.outputs.name
-//     location: location
-//     extensionType: 'microsoft.flux'
-//     name: 'flux'
-    
-//     releaseNamespace: 'flux-system'
-//     releaseTrain: 'Stable'
-
-//     configurationSettings: {
-//       'multiTenancy.enforce': 'false'
-//       'helm-controller.enabled': 'true'
-//       'source-controller.enabled': 'true'
-//       'kustomize-controller.enabled': 'true'
-//       'notification-controller.enabled': 'true'
-//       'image-automation-controller.enabled': 'false'
-//       'image-reflector-controller.enabled': 'false'
-//     }
-//     fluxConfigurations: [
-//       {
-//         namespace: 'flux-system'
-//         name: 'flux-system'
-//         scope: 'cluster'
-//         suspend: false
-//         sourceKind: configuration.features.enablePrivateSoftware == true ? 'AzureBlob' : 'GitRepository'
-//         ...(configuration.features.enablePrivateSoftware ? {
-//           azureBlob: {
-//             containerName: 'gitops'
-//             url: storageAccount.outputs.primaryBlobEndpoint
-//           }
-//         } : {
-//           gitRepository: {
-//             repositoryRef: {
-//               branch: 'main'
-//             }
-//             sshKnownHosts: ''
-//             syncIntervalInSeconds: 300
-//             timeoutInSeconds: 300
-//             url: 'https://github.com/danielscholl/cluster-paas'
-//           }
-//         })
-//         kustomizations: {
-//           global: {
-//             path: './software/global'
-//             dependsOn: []
-//             syncIntervalInSeconds: 300
-//             timeoutInSeconds: 300
-//             validation: 'none'
-//             prune: true
-//           }
-//           ...(configuration.features.enableStampTest ? {
-//             stamptest: {
-//               path: './software/stamp-test'
-//               dependsOn: ['global']
-//               syncIntervalInSeconds: 300
-//               timeoutInSeconds: 300
-//               validation: 'none'
-//               prune: true
-//             }
-//           } : {})
-//           ...(configuration.features.enableStampElastic ? {
-//             stampelastic: {
-//               path: './software/stamp-elastic'
-//               dependsOn: ['global']
-//               syncIntervalInSeconds: 300
-//               timeoutInSeconds: 300
-//               validation: 'none'
-//               prune: true
-//             }
-//           } : {})
-//         }
-//       }
-//     ]
-//   }
-//   dependsOn: [
-//     managedCluster
-//     gitOpsUpload
-//     keyvault
-//     registry
-//     identity
-//     storageAccount
-//   ]
-// }
 
 // Apply network ACL to the storage account  (Backup UI checks think we don't have access to the storage account)
-module storageAcl './storage_acl.bicep' = if (!configuration.features.enableBackup) {
+module storageAcl './storage_acl.bicep' = if (!configuration.features.enableBackup && !configuration.features.enablePrivateSoftware) {
   name: '${configuration.name}-storage-acl'
   params: {
     storageName: storageAccount.outputs.name
