@@ -24,6 +24,10 @@ mkdir -p extracted_files
 echo "Extracting contents..."
 unzip -q repo.zip -d extracted_files
 
+# Find and replace 'kind: GitRepository' with 'kind: Bucket' in all files
+echo "Replacing 'kind: GitRepository' with 'kind: Bucket' in files..."
+find extracted_files -type f -path "*/stamp-*/*" -exec sed -i 's/kind: GitRepository/kind: Bucket/g' {} +
+
 # Find the software directory
 software_dir=$(find extracted_files -type d -name "${UPLOAD_DIR}" -exec dirname {} \;)
 

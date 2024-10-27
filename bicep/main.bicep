@@ -998,7 +998,7 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
 
     kustomizations: {
       global: {
-        path: './software/global'
+        path: './software/stamp-global'
         dependsOn: []
         syncIntervalInSeconds: 300
         timeoutInSeconds: 300
@@ -1006,7 +1006,7 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
         prune: true
       }
       ...(configuration.features.enableStampTest ? {
-        stamptest: {
+        test: {
           path: './software/stamp-test'
           dependsOn: ['global']
           syncIntervalInSeconds: 300
@@ -1016,7 +1016,7 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
         }
       } : {})
       ...(configuration.features.enableStampElastic ? {
-        stampelastic: {
+        elastic: {
           path: './software/stamp-elastic'
           dependsOn: ['global']
           syncIntervalInSeconds: 300
