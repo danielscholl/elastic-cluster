@@ -59,11 +59,11 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-certs-ca-issuer
+  name: component-certs-ca
   namespace: flux-system
 spec:
   dependsOn:
-    - name: component-certs-ca
+    - name: component-certs
   interval: 1h
   retryInterval: 1m
   timeout: 5m
