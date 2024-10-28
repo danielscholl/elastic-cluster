@@ -12,7 +12,7 @@ param containerName string = 'gitops'
 param filename string = 'main.zip'
 
 @description('Name of the directory to upload')
-param directoryName array = ['software', 'chart']
+param directoryName string
 
 @description('The source of the software to upload')
 param softwareSource string = 'https://github.com/danielscholl/elastic-cluster'

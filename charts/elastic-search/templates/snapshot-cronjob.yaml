@@ -20,6 +20,12 @@ spec:
             - /bin/sh
             - -c
             - |
+              # Wait for Elasticsearch to be ready
+              until curl -s "http://elasticsearch-{{ $i }}-es-http:9200/_cluster/health" -u elastic:${ELASTIC_PASSWORD} | grep -q '"status":"green\|yellow"'; do
+                echo "Waiting for Elasticsearch..."
+                sleep 10
+              done
+
               # Register snapshot repository if it doesn't exist
               curl -X PUT "http://elasticsearch-{{ $i }}-es-http:9200/_snapshot/azure_backup" -H "Content-Type: application/json" -u elastic:${ELASTIC_PASSWORD} -d '{
                 "type": "azure",
@@ -29,8 +35,9 @@ spec:
                 }
               }'
               
-              # Create snapshot
-              curl -X PUT "http://elasticsearch-{{ $i }}-es-http:9200/_snapshot/azure_backup/%3Csnapshot-%7Bnow%2Fd%7D%3E" -H "Content-Type: application/json" -u elastic:${ELASTIC_PASSWORD} -d '{
+              # Create snapshot with date-based name
+              DATE=$(date +%Y-%m-%d)
+              curl -X PUT "http://elasticsearch-{{ $i }}-es-http:9200/_snapshot/azure_backup/snapshot-${DATE}" -H "Content-Type: application/json" -u elastic:${ELASTIC_PASSWORD} -d '{
                 "indices": "*",
                 "ignore_unavailable": true,
                 "include_global_state": true

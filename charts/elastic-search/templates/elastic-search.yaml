@@ -8,6 +8,8 @@ metadata:
   namespace: {{ $.Release.Namespace }}
 spec:
   version: {{ $.Values.elasticVersion }}
+  secureSettings:
+    - secretName: keystore
   http:
     tls:
       selfSignedCertificate:
@@ -33,8 +35,6 @@ spec:
         node.store.allow_mmap: false
         # Snapshot
         plugin.mandatory: repository-azure
-        azure.client.default.account: {{ $.Values.azure.snapshots.storageAccountName }}
-        azure.client.default.container: {{ $.Values.azure.snapshots.containerName }}
         azure.client.default.auth: workload_identity
       podTemplate:
         spec:
@@ -42,11 +42,9 @@ spec:
           containers:
             - name: elasticsearch
               env:
-                - name: AZURE_STORAGE_ACCOUNT
-                  value: {{ $.Values.azure.snapshots.storageAccountName }}
-              # Remove the ES_JAVA_OPTS environment variable
-              #   - name: ES_JAVA_OPTS
-              #     value: "-Xms1g -Xmx1g"
-              # If you need to set other environment variables, you can keep the 'env' section
-              # and just remove the ES_JAVA_OPTS entry
+                - name: AZURE_FEDERATED_TOKEN_FILE
+                  value: /usr/share/elasticsearch/config/azure/tokens/azure-identity-token
+              volumeMounts:
+                - name: azure-identity-token
+                  mountPath: /usr/share/elasticsearch/config/azure/tokens
 {{- end }}

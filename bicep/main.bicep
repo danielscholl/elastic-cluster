@@ -463,6 +463,18 @@ var configmapServices = [
     contentType: 'text/plain'
     label: 'elastic-values'
   }
+  {
+    name: 'elastic-storage-account'
+    value: storageAccount.outputs.name
+    contentType: 'text/plain'
+    label: 'elastic-secrets'
+  }
+  {
+    name: 'elastic-storage-container'
+    value: 'snapshots'
+    contentType: 'text/plain'
+    label: 'elastic-secrets'
+  }
 ]
 
 // AVM doesn't have a nice way to create the values in the store, so we forked the module.
@@ -872,22 +884,32 @@ module trustedRoleBinding 'br/public:avm/res/resources/deployment-script:0.4.0' 
 //  Software Resources                                               //
 /////////////////////////////////////////////////////////////////////
 // Custom deployment script module to upload the gitops software configuration to the storage account.
-module gitOpsUpload './software-upload/main.bicep' = {
-  name: '${configuration.name}-storage-software-upload'
+var directoryUploads = [
+  {
+    directory: 'software'
+  }
+  {
+    directory: 'charts'
+  }
+]
+
+module gitOpsUpload './software-upload/main.bicep' = [for item in directoryUploads: {
+  name: '${configuration.name}-storage-${item.directory}-upload'
   params: {
     storageAccountName: storageAccount.outputs.name
     location: location
     useExistingManagedIdentity: true
     managedIdentityName: identity.outputs.name
     existingManagedIdentitySubId: subscription().subscriptionId
-    existingManagedIdentityResourceGroupName:resourceGroup().name
+    existingManagedIdentityResourceGroupName: resourceGroup().name
     softwareSource: softwareSource
+    directoryName: item.directory
   }
   dependsOn: [
     storageAccount
     identity
   ]
-}
+}]
 
 // AVM doesn't support output of the principalId from the extension module so we have to use a deployment script to get it.
 module fluxExtension './flux-extension/main.bicep' = {
