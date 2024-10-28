@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "10714001999431688756"
+      "templateHash": "15030242339943618040"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -21942,7 +21942,6 @@
           "location": {
             "value": "[parameters('location')]"
           },
-          "storageAccountName": "[if(variables('configuration').features.enablePrivateSoftware, createObject('value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name)), '2022-09-01').outputs.name.value), createObject('value', null()))]",
           "namespace": {
             "value": "flux-system"
           },
@@ -21967,7 +21966,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "6518860773398143065"
+              "templateHash": "7866905626720137637"
             },
             "name": "Kubernetes Configuration Flux Configurations",
             "description": "This module deploys a Kubernetes Configuration Flux Configuration.",
@@ -21998,13 +21997,6 @@
               "defaultValue": "[resourceGroup().location]",
               "metadata": {
                 "description": "Optional. Location for all resources."
-              }
-            },
-            "storageAccountName": {
-              "type": "string",
-              "defaultValue": "",
-              "metadata": {
-                "description": "Optional. The name of the storage account to be used."
               }
             },
             "bucket": {
@@ -22047,13 +22039,6 @@
                 "description": "Required. The namespace to which this configuration is installed to. Maximum of 253 lower case alphanumeric characters, hyphen and period only."
               }
             },
-            "dateStamp": {
-              "type": "string",
-              "defaultValue": "[utcNow()]",
-              "metadata": {
-                "description": "Date Stamp - Used for sentinel in configuration store."
-              }
-            },
             "scope": {
               "type": "string",
               "allowedValues": [
@@ -22083,15 +22068,6 @@
               }
             }
           },
-          "variables": {
-            "sasProperties": {
-              "signedServices": "b",
-              "signedResourceTypes": "sco",
-              "signedPermission": "rwlacup",
-              "signedProtocol": "https",
-              "signedExpiry": "[dateTimeAdd(parameters('dateStamp'), 'P1Y')]"
-            }
-          },
           "resources": {
             "avmTelemetry": {
               "condition": "[parameters('enableTelemetry')]",
@@ -22118,12 +22094,6 @@
               "type": "Microsoft.ContainerService/managedClusters",
               "apiVersion": "2022-07-01",
               "name": "[parameters('clusterName')]"
-            },
-            "storageAccount": {
-              "existing": true,
-              "type": "Microsoft.Storage/storageAccounts",
-              "apiVersion": "2022-09-01",
-              "name": "[parameters('storageAccountName')]"
             },
             "fluxConfiguration": {
               "type": "Microsoft.KubernetesConfiguration/fluxConfigurations",

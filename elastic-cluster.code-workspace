@@ -1,0 +1,32 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"material-icon-theme.folders.associations": {
+			".mvn": "packages",  // Sets the Maven icon for the .mvn folder
+			"maven": "config",
+			"wrapper": "config",
+			"devops": "kubernetes",  // Example: Sets an Azure Pipelines icon for the devops folder
+			"azure": "azure-pipelines",
+			"chart": "helm",
+			"charts": "helm",
+			"main": "java",
+			"pipeline": "ci",
+			"applications": "app",
+			"stamp": "cluster",
+			"stamp-global": "cluster",
+			"stamp-test": "cluster",
+			"stamp-elastic": "cluster",
+			"software": "dist",
+			"dags": "pipe",
+			"experimental": "custom",
+			"certs-ca": "secure",
+			"certs-ca-issuer": "secure",
+			"dns": "public",
+			"elastic": "meta"
+		}
+	}
+}

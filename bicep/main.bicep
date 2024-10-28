@@ -907,6 +907,7 @@ module fluxExtension './flux-extension/main.bicep' = {
   }
 }
 
+// This is a custom module to get the clientId of the extension identity.
 module extensionClientId 'br/public:avm/res/resources/deployment-script:0.4.0' = if (configuration.features.enablePrivateSoftware) {
   name: '${configuration.name}-script-clientId'
   
@@ -950,6 +951,7 @@ module extensionClientId 'br/public:avm/res/resources/deployment-script:0.4.0' =
   ]
 }
 
+// This is a custom module to create the role assignment for the extension identity to the storage account blob.
 module fluxExtensionRole './aks_flux_extension_role.bicep' = if (configuration.features.enablePrivateSoftware) {
   name: '${configuration.name}-flux-extension-role'
   params: {
@@ -962,16 +964,13 @@ module fluxExtensionRole './aks_flux_extension_role.bicep' = if (configuration.f
   ]
 }
 
-// AVM doesn't support azure blob as a gitops source yet we used a fork of the module to support it with SAS token.
+// AVM doesn't support azure blob as a gitops source yet we used a fork of the module to support it.
 module fluxConfiguration './flux-configuration/main.bicep' = {
   name: '${configuration.name}-flux-configuration'
   params: {
     name: 'flux-system'
     clusterName: managedCluster.outputs.name
     location: location
-
-    // This is the hack to trigger the SAS token to be created.
-    storageAccountName: configuration.features.enablePrivateSoftware ? storageAccount.outputs.name : null
 
     namespace: 'flux-system'
     scope: 'cluster'
@@ -987,7 +986,7 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
       timeoutInSeconds: 300
       url: 'https://github.com/danielscholl/cluster-paas'
     } : null
-    // This is hacked to get the SAS token to be created.
+    
     azureBlob: configuration.features.enablePrivateSoftware ? {
       containerName: 'gitops'
       url: storageAccount.outputs.primaryBlobEndpoint
