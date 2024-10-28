@@ -33,9 +33,6 @@ param vmSize string = 'Standard_D4s_v3'
 @description('Elastic Version')
 param elasticVersion string = '8.15.3'
 
-@description('Number of Instances')
-param instances int = 1
-
 @description('Optional. DNS Zone Resource ID.')
 param dnsZoneResourceId string = ''
 
@@ -74,8 +71,9 @@ var configuration = {
     enablePrivateSoftware: enableBlobSoftware
     enableMesh: false
     enablePaasPool: false
-    enableStampTest: false
+    enableStampTest: true
     enableBackup: enableAKSBackup
+    instances: 1
   }
 }
 
@@ -443,7 +441,7 @@ var configmapServices = [
   }
   {
     name: 'instances'
-    value: string(instances)
+    value: string(configuration.features.instances)
     contentType: 'application/json'
     label: 'elastic-values'
   }
@@ -523,7 +521,7 @@ var staticSecrets = [
 var baseElasticKey = '${uniqueString(resourceGroup().id, location)}${uniqueString(subscription().id, deployment().name)}'
 
 // Elastic secrets, flattened to individual objects
-var elasticSecrets = [for i in range(0, instances): [
+var elasticSecrets = [for i in range(0, configuration.features.instances): [
   {
     secretName: 'elastic-username-${i}'
     secretValue: 'elastic-user'
@@ -1094,7 +1092,7 @@ module appConfigMap './aks-config-map/main.bicep' = {
              configurationStore.outputs.endpoint,
              keyvault.outputs.uri,
              keyvault.outputs.name,
-             instances)
+             configuration.features.instances)
     ]
 
     newOrExistingManagedIdentity: 'existing'

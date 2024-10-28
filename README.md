@@ -184,8 +184,7 @@ When the status reflects *Registered*, refresh the registration of the *Microsof
 #### Important Notes
 
 - Ingress with valid certificates and DNS is not yet implemented.
-- AKS Backup instances are not yet configured for backup feature flag.
-- Multiple instances of elastic search are not yet supported.
+- AKS Backup instances are not automatically configured for backup feature flag.
 
 > Note: Backup requires Storage Accounts with `Allow Storage Account Key Access` offering no support for Managed Identity -- Bad Practice.
 

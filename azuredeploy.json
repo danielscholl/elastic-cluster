@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "10026334630187152920"
+      "templateHash": "9021520342660478210"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -65,13 +65,6 @@
         "description": "Elastic Version"
       }
     },
-    "instances": {
-      "type": "int",
-      "defaultValue": 1,
-      "metadata": {
-        "description": "Number of Instances"
-      }
-    },
     "dnsZoneResourceId": {
       "type": "string",
       "defaultValue": "",
@@ -91,8 +84,8 @@
     "copy": [
       {
         "name": "elasticSecrets",
-        "count": "[length(range(0, parameters('instances')))]",
-        "input": "[createArray(createObject('secretName', format('elastic-username-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', 'elastic-user'), createObject('secretName', format('elastic-password-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', substring(uniqueString(resourceGroup().id, parameters('location'), format('saltpass{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')])), 0, 13)), createObject('secretName', format('elastic-key-{0}', range(0, parameters('instances'))[copyIndex('elasticSecrets')]), 'secretValue', substring(format('{0}{1}{2}', variables('baseElasticKey'), variables('baseElasticKey'), variables('baseElasticKey')), 0, 32)))]"
+        "count": "[length(range(0, variables('configuration').features.instances))]",
+        "input": "[createArray(createObject('secretName', format('elastic-username-{0}', range(0, variables('configuration').features.instances)[copyIndex('elasticSecrets')]), 'secretValue', 'elastic-user'), createObject('secretName', format('elastic-password-{0}', range(0, variables('configuration').features.instances)[copyIndex('elasticSecrets')]), 'secretValue', substring(uniqueString(resourceGroup().id, parameters('location'), format('saltpass{0}', range(0, variables('configuration').features.instances)[copyIndex('elasticSecrets')])), 0, 13)), createObject('secretName', format('elastic-key-{0}', range(0, variables('configuration').features.instances)[copyIndex('elasticSecrets')]), 'secretValue', substring(format('{0}{1}{2}', variables('baseElasticKey'), variables('baseElasticKey'), variables('baseElasticKey')), 0, 32)))]"
       }
     ],
     "configuration": {
@@ -125,8 +118,9 @@
         "enablePrivateSoftware": "[parameters('enableBlobSoftware')]",
         "enableMesh": false,
         "enablePaasPool": false,
-        "enableStampTest": false,
-        "enableBackup": "[parameters('enableAKSBackup')]"
+        "enableStampTest": true,
+        "enableBackup": "[parameters('enableAKSBackup')]",
+        "instances": 1
       }
     },
     "rg_unique_id": "[format('{0}{1}', replace(variables('configuration').name, '-', ''), uniqueString(resourceGroup().id, variables('configuration').name))]",
@@ -8988,7 +8982,7 @@
             "value": true
           },
           "keyValues": {
-            "value": "[concat(union(createArray(createObject('name', 'sentinel', 'value', parameters('dateStamp'), 'label', 'common'), createObject('name', 'tenant_id', 'value', subscription().tenantId, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'azure_msi_client_id', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.clientId.value, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'keyvault_uri', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.uri.value, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'instances', 'value', string(parameters('instances')), 'contentType', 'application/json', 'label', 'elastic-values'), createObject('name', 'version', 'value', string(parameters('elasticVersion')), 'contentType', 'text/plain', 'label', 'elastic-values'), createObject('name', 'storageSize', 'value', '30Gi', 'contentType', 'text/plain', 'label', 'elastic-values'), createObject('name', 'storageClass', 'value', 'managed-premium', 'contentType', 'text/plain', 'label', 'elastic-values')), createArray()))]"
+            "value": "[concat(union(createArray(createObject('name', 'sentinel', 'value', parameters('dateStamp'), 'label', 'common'), createObject('name', 'tenant_id', 'value', subscription().tenantId, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'azure_msi_client_id', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.clientId.value, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'keyvault_uri', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.uri.value, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'instances', 'value', string(variables('configuration').features.instances), 'contentType', 'application/json', 'label', 'elastic-values'), createObject('name', 'version', 'value', string(parameters('elasticVersion')), 'contentType', 'text/plain', 'label', 'elastic-values'), createObject('name', 'storageSize', 'value', '30Gi', 'contentType', 'text/plain', 'label', 'elastic-values'), createObject('name', 'storageClass', 'value', 'managed-premium', 'contentType', 'text/plain', 'label', 'elastic-values')), createArray()))]"
           }
         },
         "template": {
@@ -22278,7 +22272,7 @@
           },
           "fileData": {
             "value": [
-              "[format(variables('configMaps').appConfigTemplate, subscription().tenantId, reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.clientId.value, reference(resourceId('Microsoft.Resources/deployments', format('{0}-appconfig', variables('configuration').name)), '2022-09-01').outputs.endpoint.value, reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.uri.value, reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.name.value, parameters('instances'))]"
+              "[format(variables('configMaps').appConfigTemplate, subscription().tenantId, reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.clientId.value, reference(resourceId('Microsoft.Resources/deployments', format('{0}-appconfig', variables('configuration').name)), '2022-09-01').outputs.endpoint.value, reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.uri.value, reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.name.value, variables('configuration').features.instances)]"
             ]
           },
           "newOrExistingManagedIdentity": {
