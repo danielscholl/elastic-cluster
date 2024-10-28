@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "3614283204380489013"
+      "templateHash": "16231268744276696067"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -20653,7 +20653,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "9312055106595902411"
+              "templateHash": "16517614502760187047"
             },
             "name": "Blob Upload",
             "description": "This module uploads a file to a blob storage account",
@@ -20772,7 +20772,7 @@
             }
           },
           "variables": {
-            "$fxv#0": "#!/bin/bash\nset -e\n\necho \"Waiting on Identity RBAC replication (${initialDelay})\"\nsleep ${initialDelay}\n\n# Installing required packages\napk add --no-cache curl zip unzip\n\n# Download the file using curl\necho \"Downloading file from ${URL}\"\ncurl -L -o repo.zip \"${URL}\"\n\n# Check if the download was successful\nif [ $? -ne 0 ]; then\n    echo \"Failed to download the file from ${URL}\"\n    exit 1\nfi\n\n# Create a directory for extracted files\nmkdir -p extracted_files\n\n# Unzip the file\necho \"Extracting contents...\"\nunzip -q repo.zip -d extracted_files\n\n# Find and replace 'kind: GitRepository' with 'kind: Bucket' in all files\necho \"Replacing 'kind: GitRepository' with 'kind: Bucket' in files...\"\nfind extracted_files -type f -path \"*/stamp-*/*\" -exec sed -i 's/kind: GitRepository/kind: Bucket/g' {} +\n\n# Find the software directory\nsoftware_dir=$(find extracted_files -type d -name \"${UPLOAD_DIR}\" -exec dirname {} \\;)\n\nif [ -z \"$software_dir\" ]; then\n    echo \"Error: '${UPLOAD_DIR}' directory not found in the extracted contents.\"\n    exit 1\nfi\n\n# Upload the contents of the software directory\necho \"Uploading files from ${software_dir} to blob container ${CONTAINER}\"\naz storage blob upload-batch --destination ${CONTAINER} --source \"${software_dir}\" --pattern \"${UPLOAD_DIR}/**\" --overwrite true --auth-mode login\necho \"Files from software directory uploaded to blob container ${CONTAINER}.\"\n\n# Clean up\nrm -rf extracted_files repo.zip\n"
+            "$fxv#0": "#!/bin/bash\nset -e\n\necho \"Waiting on Identity RBAC replication (${initialDelay})\"\nsleep ${initialDelay}\n\n# Installing required packages\napk add --no-cache curl zip unzip\n\n# Download the file using curl\necho \"Downloading file from ${URL}\"\ncurl -L -o repo.zip \"${URL}\"\n\n# Check if the download was successful\nif [ $? -ne 0 ]; then\n    echo \"Failed to download the file from ${URL}\"\n    exit 1\nfi\n\n# Create a directory for extracted files\nmkdir -p extracted_files\n\n# Unzip the file\necho \"Extracting contents...\"\nunzip -q repo.zip -d extracted_files\n\n# Find and replace 'kind: GitRepository' with 'kind: Bucket' in all files\nfind extracted_files -type f -path \"*/software/*\" -exec sed -i '\n    /sourceRef:/{\n        N;N;N\n        s/sourceRef:\\n[[:space:]]*kind: GitRepository\\n[[:space:]]*name: flux-system\\n[[:space:]]*namespace: flux-system/sourceRef:\\n        kind: Bucket\\n        name: flux-system\\n        namespace: flux-system/g\n    }' {} +\n\n# Find the software directory\nsoftware_dir=$(find extracted_files -type d -name \"${UPLOAD_DIR}\" -exec dirname {} \\;)\n\nif [ -z \"$software_dir\" ]; then\n    echo \"Error: '${UPLOAD_DIR}' directory not found in the extracted contents.\"\n    exit 1\nfi\n\n# Upload the contents of the software directory\necho \"Uploading files from ${software_dir} to blob container ${CONTAINER}\"\naz storage blob upload-batch --destination ${CONTAINER} --source \"${software_dir}\" --pattern \"${UPLOAD_DIR}/**\" --overwrite true --auth-mode login\necho \"Files from software directory uploaded to blob container ${CONTAINER}.\"\n\n# Clean up\nrm -rf extracted_files repo.zip\n"
           },
           "resources": [
             {
@@ -21966,7 +21966,7 @@
           "gitRepository": "[if(not(variables('configuration').features.enablePrivateSoftware), createObject('value', createObject('repositoryRef', createObject('branch', 'main'), 'sshKnownHosts', '', 'syncIntervalInSeconds', 60, 'timeoutInSeconds', 300, 'url', parameters('softwareSource'))), createObject('value', null()))]",
           "azureBlob": "[if(variables('configuration').features.enablePrivateSoftware, createObject('value', createObject('containerName', 'gitops', 'url', reference(resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name)), '2022-09-01').outputs.primaryBlobEndpoint.value, 'managedIdentity', createObject('clientId', reference(resourceId('Microsoft.Resources/deployments', format('{0}-script-clientId', variables('configuration').name)), '2022-09-01').outputs.outputs.value.clientId))), createObject('value', null()))]",
           "kustomizations": {
-            "value": "[shallowMerge(createArray(createObject('global', createObject('path', './software/stamp-global', 'dependsOn', createArray(), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'retryIntervalInSeconds', 300, 'validation', 'none', 'prune', true())), if(variables('configuration').features.enableStampTest, createObject('test', createObject('path', './software/stamp-test', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'retryIntervalInSeconds', 300, 'validation', 'none', 'prune', true())), createObject()), if(variables('configuration').features.enableStampElastic, createObject('elastic', createObject('path', './software/stamp-elastic', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'retryIntervalInSeconds', 300, 'validation', 'none', 'prune', true())), createObject())))]"
+            "value": "[shallowMerge(createArray(createObject('global', createObject('path', './software/stamp-global', 'dependsOn', createArray(), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), if(variables('configuration').features.enableStampTest, createObject('test', createObject('path', './software/stamp-test', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject()), if(variables('configuration').features.enableStampElastic, createObject('elastic', createObject('path', './software/stamp-elastic', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject())))]"
           }
         },
         "template": {

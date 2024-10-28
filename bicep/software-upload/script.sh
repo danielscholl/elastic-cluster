@@ -25,8 +25,11 @@ echo "Extracting contents..."
 unzip -q repo.zip -d extracted_files
 
 # Find and replace 'kind: GitRepository' with 'kind: Bucket' in all files
-echo "Replacing 'kind: GitRepository' with 'kind: Bucket' in files..."
-find extracted_files -type f -path "*/stamp-*/*" -exec sed -i 's/kind: GitRepository/kind: Bucket/g' {} +
+find extracted_files -type f -path "*/software/*" -exec sed -i '
+    /sourceRef:/{
+        N;N;N
+        s/sourceRef:\n[[:space:]]*kind: GitRepository\n[[:space:]]*name: flux-system\n[[:space:]]*namespace: flux-system/sourceRef:\n        kind: Bucket\n        name: flux-system\n        namespace: flux-system/g
+    }' {} +
 
 # Find the software directory
 software_dir=$(find extracted_files -type d -name "${UPLOAD_DIR}" -exec dirname {} \;)

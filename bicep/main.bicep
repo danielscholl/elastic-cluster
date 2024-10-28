@@ -1003,7 +1003,6 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
         dependsOn: []
         syncIntervalInSeconds: 300
         timeoutInSeconds: 300
-        retryIntervalInSeconds: 300
         validation: 'none'
         prune: true
       }
@@ -1013,7 +1012,6 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
           dependsOn: ['global']
           syncIntervalInSeconds: 300
           timeoutInSeconds: 300
-          retryIntervalInSeconds: 300
           validation: 'none'
           prune: true
         }
@@ -1024,7 +1022,6 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
           dependsOn: ['global']
           syncIntervalInSeconds: 300
           timeoutInSeconds: 300
-          retryIntervalInSeconds: 300
           validation: 'none'
           prune: true
         }
