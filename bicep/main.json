@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "16231268744276696067"
+      "templateHash": "373831102939587352"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -151,7 +151,7 @@
     "baseElasticKey": "[format('{0}{1}', uniqueString(resourceGroup().id, parameters('location')), uniqueString(subscription().id, deployment().name))]",
     "vaultSecrets": "[union(variables('staticSecrets'), flatten(variables('elasticSecrets')))]",
     "configMaps": {
-      "appConfigTemplate": "values.yaml: |\n  serviceAccount:\n    create: false\n    name: \"workload-identity-sa\"\n  azure:\n    tenantId: {0}\n    clientId: {1}\n    configEndpoint: {2}\n    keyvaultUri: {3}\n    keyvaultName: {4}\n  iterateCount: {5}\n  "
+      "appConfigTemplate": "values.yaml: |\n  serviceAccount:\n    create: false\n    name: \"workload-identity-sa\"\n  azure:\n    tenantId: {0}\n    clientId: {1}\n    configEndpoint: {2}\n    keyvaultUri: {3}\n    keyvaultName: {4}\n    snapshots:\n      storageAccountName: {5}\n      containerName: 'snapshots'\n  iterateCount: {6}\n  "
     }
   },
   "resources": [
@@ -14642,6 +14642,9 @@
                 },
                 {
                   "name": "backup"
+                },
+                {
+                  "name": "snapshots"
                 }
               ]
             }
@@ -20653,7 +20656,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "16517614502760187047"
+              "templateHash": "8262765660671273717"
             },
             "name": "Blob Upload",
             "description": "This module uploads a file to a blob storage account",
@@ -20682,8 +20685,11 @@
               }
             },
             "directoryName": {
-              "type": "string",
-              "defaultValue": "software",
+              "type": "array",
+              "defaultValue": [
+                "software",
+                "chart"
+              ],
               "metadata": {
                 "description": "Name of the directory to upload"
               }
@@ -20772,7 +20778,7 @@
             }
           },
           "variables": {
-            "$fxv#0": "#!/bin/bash\nset -e\n\necho \"Waiting on Identity RBAC replication (${initialDelay})\"\nsleep ${initialDelay}\n\n# Installing required packages\napk add --no-cache curl zip unzip\n\n# Download the file using curl\necho \"Downloading file from ${URL}\"\ncurl -L -o repo.zip \"${URL}\"\n\n# Check if the download was successful\nif [ $? -ne 0 ]; then\n    echo \"Failed to download the file from ${URL}\"\n    exit 1\nfi\n\n# Create a directory for extracted files\nmkdir -p extracted_files\n\n# Unzip the file\necho \"Extracting contents...\"\nunzip -q repo.zip -d extracted_files\n\n# Find and replace 'kind: GitRepository' with 'kind: Bucket' in all files\nfind extracted_files -type f -path \"*/software/*\" -exec sed -i '\n    /sourceRef:/{\n        N;N;N\n        s/sourceRef:\\n[[:space:]]*kind: GitRepository\\n[[:space:]]*name: flux-system\\n[[:space:]]*namespace: flux-system/sourceRef:\\n        kind: Bucket\\n        name: flux-system\\n        namespace: flux-system/g\n    }' {} +\n\n# Find the software directory\nsoftware_dir=$(find extracted_files -type d -name \"${UPLOAD_DIR}\" -exec dirname {} \\;)\n\nif [ -z \"$software_dir\" ]; then\n    echo \"Error: '${UPLOAD_DIR}' directory not found in the extracted contents.\"\n    exit 1\nfi\n\n# Upload the contents of the software directory\necho \"Uploading files from ${software_dir} to blob container ${CONTAINER}\"\naz storage blob upload-batch --destination ${CONTAINER} --source \"${software_dir}\" --pattern \"${UPLOAD_DIR}/**\" --overwrite true --auth-mode login\necho \"Files from software directory uploaded to blob container ${CONTAINER}.\"\n\n# Clean up\nrm -rf extracted_files repo.zip\n"
+            "$fxv#0": "#!/bin/bash\nset -e\n\necho \"Waiting on Identity RBAC replication (${initialDelay})\"\nsleep ${initialDelay}\n\n# Installing required packages\napk add --no-cache curl zip unzip\n\n# Download the file using curl\necho \"Downloading file from ${URL}\"\ncurl -L -o repo.zip \"${URL}\"\n\n# Check if the download was successful\nif [ $? -ne 0 ]; then\n    echo \"Failed to download the file from ${URL}\"\n    exit 1\nfi\n\n# Create a directory for extracted files\nmkdir -p extracted_files\n\n# Unzip the file\necho \"Extracting contents...\"\nunzip -q repo.zip -d extracted_files\n\n# Find and replace 'kind: GitRepository' with 'kind: Bucket' in all files\nfind extracted_files -type f -path \"*/software/*\" -exec sed -i '\n    /sourceRef:/{\n        N;N;N\n        s/sourceRef:\\n[[:space:]]*kind: GitRepository\\n[[:space:]]*name: flux-system\\n[[:space:]]*namespace: flux-system/sourceRef:\\n        kind: Bucket\\n        name: flux-system\\n        namespace: flux-system/g\n    }' {} +\n\n\n# Convert the JSON string to bash array\neval \"array=($(echo $UPLOAD_DIR | jq -r '.[]'))\"\n\n# Loop the directories and upload the files\nfor item in \"${array[@]}\"; do\n    echo \"Processing folder ${item}\"\n    software_dir=$(find extracted_files -type d -name \"${item}\" -exec dirname {} \\;)\n\n    if [ -z \"$software_dir\" ]; then\n        echo \"Error: '${item}' directory not found in the extracted contents.\"\n        exit 1\n    fi\n\n    echo \"Uploading files from ${software_dir} to blob container ${CONTAINER}\"\n    az storage blob upload-batch --destination ${CONTAINER} --source \"${software_dir}\" --pattern \"${item}/**\" --overwrite true --auth-mode login\n    echo \"Files from software directory uploaded to blob container ${CONTAINER}.\"\ndone\n\n# Clean up\nrm -rf extracted_files repo.zip\n"
           },
           "resources": [
             {
@@ -20837,7 +20843,7 @@
                   },
                   {
                     "name": "UPLOAD_DIR",
-                    "value": "[parameters('directoryName')]"
+                    "value": "[string(parameters('directoryName'))]"
                   },
                   {
                     "name": "initialDelay",
@@ -22272,7 +22278,7 @@
           },
           "fileData": {
             "value": [
-              "[format(variables('configMaps').appConfigTemplate, subscription().tenantId, reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.clientId.value, reference(resourceId('Microsoft.Resources/deployments', format('{0}-appconfig', variables('configuration').name)), '2022-09-01').outputs.endpoint.value, reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.uri.value, reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.name.value, variables('configuration').features.instances)]"
+              "[format(variables('configMaps').appConfigTemplate, subscription().tenantId, reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.clientId.value, reference(resourceId('Microsoft.Resources/deployments', format('{0}-appconfig', variables('configuration').name)), '2022-09-01').outputs.endpoint.value, reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.uri.value, reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.name.value, reference(resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name)), '2022-09-01').outputs.name.value, variables('configuration').features.instances)]"
             ]
           },
           "newOrExistingManagedIdentity": {
@@ -22526,7 +22532,8 @@
         "[resourceId('Microsoft.Resources/deployments', format('{0}-flux-configuration', variables('configuration').name))]",
         "[resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name))]",
         "[resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name))]",
-        "[resourceId('Microsoft.Resources/deployments', format('{0}-cluster', variables('configuration').name))]"
+        "[resourceId('Microsoft.Resources/deployments', format('{0}-cluster', variables('configuration').name))]",
+        "[resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name))]"
       ]
     }
   ]

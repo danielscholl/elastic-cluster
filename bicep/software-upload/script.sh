@@ -31,18 +31,24 @@ find extracted_files -type f -path "*/software/*" -exec sed -i '
         s/sourceRef:\n[[:space:]]*kind: GitRepository\n[[:space:]]*name: flux-system\n[[:space:]]*namespace: flux-system/sourceRef:\n        kind: Bucket\n        name: flux-system\n        namespace: flux-system/g
     }' {} +
 
-# Find the software directory
-software_dir=$(find extracted_files -type d -name "${UPLOAD_DIR}" -exec dirname {} \;)
 
-if [ -z "$software_dir" ]; then
-    echo "Error: '${UPLOAD_DIR}' directory not found in the extracted contents."
-    exit 1
-fi
+# Convert the JSON string to bash array
+eval "array=($(echo $UPLOAD_DIR | jq -r '.[]'))"
 
-# Upload the contents of the software directory
-echo "Uploading files from ${software_dir} to blob container ${CONTAINER}"
-az storage blob upload-batch --destination ${CONTAINER} --source "${software_dir}" --pattern "${UPLOAD_DIR}/**" --overwrite true --auth-mode login
-echo "Files from software directory uploaded to blob container ${CONTAINER}."
+# Loop the directories and upload the files
+for item in "${array[@]}"; do
+    echo "Processing folder ${item}"
+    software_dir=$(find extracted_files -type d -name "${item}" -exec dirname {} \;)
+
+    if [ -z "$software_dir" ]; then
+        echo "Error: '${item}' directory not found in the extracted contents."
+        exit 1
+    fi
+
+    echo "Uploading files from ${software_dir} to blob container ${CONTAINER}"
+    az storage blob upload-batch --destination ${CONTAINER} --source "${software_dir}" --pattern "${item}/**" --overwrite true --auth-mode login
+    echo "Files from software directory uploaded to blob container ${CONTAINER}."
+done
 
 # Clean up
 rm -rf extracted_files repo.zip

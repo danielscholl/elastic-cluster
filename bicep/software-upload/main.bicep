@@ -12,7 +12,7 @@ param containerName string = 'gitops'
 param filename string = 'main.zip'
 
 @description('Name of the directory to upload')
-param directoryName string = 'software'
+param directoryName array = ['software', 'chart']
 
 @description('The source of the software to upload')
 param softwareSource string = 'https://github.com/danielscholl/elastic-cluster'
@@ -93,7 +93,7 @@ resource uploadFile 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       { name: 'FILE', value: filename }
       { name: 'URL', value: '${softwareSource}${fileurl}' }
       { name: 'CONTAINER', value: containerName }
-      { name: 'UPLOAD_DIR', value: directoryName }
+      { name: 'UPLOAD_DIR', value: string(directoryName) }
       { name: 'initialDelay', value: initialScriptDelay }
     ]
     scriptContent: loadTextContent('script.sh')
