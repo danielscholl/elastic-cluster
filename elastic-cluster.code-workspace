@@ -6,10 +6,9 @@
 	],
 	"settings": {
 		"material-icon-theme.folders.associations": {
-			".mvn": "packages",  // Sets the Maven icon for the .mvn folder
 			"maven": "config",
 			"wrapper": "config",
-			"devops": "kubernetes",  // Example: Sets an Azure Pipelines icon for the devops folder
+			"devops": "kubernetes",  
 			"azure": "azure-pipelines",
 			"chart": "helm",
 			"charts": "helm",

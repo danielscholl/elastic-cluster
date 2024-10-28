@@ -6,6 +6,9 @@ metadata description = 'This deploys a managed Kubernetes cluster.'
 @description('Specify the Azure region to place the application definition.')
 param location string = resourceGroup().location
 
+@description('Location of the Software Source Code.')
+param softwareSource string = 'https://github.com/danielscholl/elastic-cluster'
+
 @description('Enable Software from Azure Blob Storage (Requires Storage Account Key Access).')
 param enableBlobSoftware bool = false
 
@@ -877,6 +880,7 @@ module gitOpsUpload './software-upload/main.bicep' = {
     managedIdentityName: identity.outputs.name
     existingManagedIdentitySubId: subscription().subscriptionId
     existingManagedIdentityResourceGroupName:resourceGroup().name
+    softwareSource: softwareSource
   }
   dependsOn: [
     storageAccount
@@ -982,9 +986,9 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
         branch: 'main'
       }
       sshKnownHosts: ''
-      syncIntervalInSeconds: 300
+      syncIntervalInSeconds: 60
       timeoutInSeconds: 300
-      url: 'https://github.com/danielscholl/cluster-paas'
+      url: softwareSource
     } : null
     
     azureBlob: configuration.features.enablePrivateSoftware ? {
@@ -1001,6 +1005,7 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
         dependsOn: []
         syncIntervalInSeconds: 300
         timeoutInSeconds: 300
+        retryIntervalInSeconds: 300
         validation: 'none'
         prune: true
       }
@@ -1010,6 +1015,7 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
           dependsOn: ['global']
           syncIntervalInSeconds: 300
           timeoutInSeconds: 300
+          retryIntervalInSeconds: 300
           validation: 'none'
           prune: true
         }
@@ -1020,6 +1026,7 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
           dependsOn: ['global']
           syncIntervalInSeconds: 300
           timeoutInSeconds: 300
+          retryIntervalInSeconds: 300
           validation: 'none'
           prune: true
         }

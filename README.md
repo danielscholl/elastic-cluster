@@ -185,9 +185,9 @@ When the status reflects *Registered*, refresh the registration of the *Microsof
 
 - Ingress with valid certificates and DNS is not yet implemented.
 - AKS Backup instances are not yet configured for backup feature flag.
-- Bugs still exist in Private Software feature flag.
 - Multiple instances of elastic search are not yet supported.
 
-> Note: Backup requires Storage Accounts with `Allow Storage Account Key Access` -- Bad Practice.
+> Note: Backup requires Storage Accounts with `Allow Storage Account Key Access` offering no support for Managed Identity -- Bad Practice.
 
-> Note: Flux Configurations with AzureBlob requires SAS tokens to be used as managed identities are not yet supported using automation and can only work with manual configurations. -- Bad Practice.
+> Note: Flux Configurations with AzureBlob don't work with NAT Gateway so requires Public Network Access -- Bad Practice
+

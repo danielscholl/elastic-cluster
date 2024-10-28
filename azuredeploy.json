@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "15030242339943618040"
+      "templateHash": "10026334630187152920"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -16,6 +16,13 @@
       "defaultValue": "[resourceGroup().location]",
       "metadata": {
         "description": "Specify the Azure region to place the application definition."
+      }
+    },
+    "softwareSource": {
+      "type": "string",
+      "defaultValue": "https://github.com/danielscholl/elastic-cluster",
+      "metadata": {
+        "description": "Location of the Software Source Code."
       }
     },
     "enableBlobSoftware": {
@@ -20640,6 +20647,9 @@
           },
           "existingManagedIdentityResourceGroupName": {
             "value": "[resourceGroup().name]"
+          },
+          "softwareSource": {
+            "value": "[parameters('softwareSource')]"
           }
         },
         "template": {
@@ -20649,7 +20659,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "1189719506949063503"
+              "templateHash": "9312055106595902411"
             },
             "name": "Blob Upload",
             "description": "This module uploads a file to a blob storage account",
@@ -20684,9 +20694,16 @@
                 "description": "Name of the directory to upload"
               }
             },
+            "softwareSource": {
+              "type": "string",
+              "defaultValue": "https://github.com/danielscholl/elastic-cluster",
+              "metadata": {
+                "description": "The source of the software to upload"
+              }
+            },
             "fileurl": {
               "type": "string",
-              "defaultValue": "https://github.com/danielscholl/cluster-paas/archive/refs/heads/main.zip",
+              "defaultValue": "/archive/refs/heads/main.zip",
               "metadata": {
                 "description": "Name of the file as it is stored in the share"
               }
@@ -20818,7 +20835,7 @@
                   },
                   {
                     "name": "URL",
-                    "value": "[parameters('fileurl')]"
+                    "value": "[format('{0}{1}', parameters('softwareSource'), parameters('fileurl'))]"
                   },
                   {
                     "name": "CONTAINER",
@@ -21952,10 +21969,10 @@
             "value": false
           },
           "sourceKind": "[if(variables('configuration').features.enablePrivateSoftware, createObject('value', 'AzureBlob'), createObject('value', 'GitRepository'))]",
-          "gitRepository": "[if(not(variables('configuration').features.enablePrivateSoftware), createObject('value', createObject('repositoryRef', createObject('branch', 'main'), 'sshKnownHosts', '', 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'url', 'https://github.com/danielscholl/cluster-paas')), createObject('value', null()))]",
+          "gitRepository": "[if(not(variables('configuration').features.enablePrivateSoftware), createObject('value', createObject('repositoryRef', createObject('branch', 'main'), 'sshKnownHosts', '', 'syncIntervalInSeconds', 60, 'timeoutInSeconds', 300, 'url', parameters('softwareSource'))), createObject('value', null()))]",
           "azureBlob": "[if(variables('configuration').features.enablePrivateSoftware, createObject('value', createObject('containerName', 'gitops', 'url', reference(resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name)), '2022-09-01').outputs.primaryBlobEndpoint.value, 'managedIdentity', createObject('clientId', reference(resourceId('Microsoft.Resources/deployments', format('{0}-script-clientId', variables('configuration').name)), '2022-09-01').outputs.outputs.value.clientId))), createObject('value', null()))]",
           "kustomizations": {
-            "value": "[shallowMerge(createArray(createObject('global', createObject('path', './software/stamp-global', 'dependsOn', createArray(), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), if(variables('configuration').features.enableStampTest, createObject('test', createObject('path', './software/stamp-test', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject()), if(variables('configuration').features.enableStampElastic, createObject('elastic', createObject('path', './software/stamp-elastic', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject())))]"
+            "value": "[shallowMerge(createArray(createObject('global', createObject('path', './software/stamp-global', 'dependsOn', createArray(), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'retryIntervalInSeconds', 300, 'validation', 'none', 'prune', true())), if(variables('configuration').features.enableStampTest, createObject('test', createObject('path', './software/stamp-test', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'retryIntervalInSeconds', 300, 'validation', 'none', 'prune', true())), createObject()), if(variables('configuration').features.enableStampElastic, createObject('elastic', createObject('path', './software/stamp-elastic', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'retryIntervalInSeconds', 300, 'validation', 'none', 'prune', true())), createObject())))]"
           }
         },
         "template": {

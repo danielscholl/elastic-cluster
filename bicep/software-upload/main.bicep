@@ -14,8 +14,11 @@ param filename string = 'main.zip'
 @description('Name of the directory to upload')
 param directoryName string = 'software'
 
+@description('The source of the software to upload')
+param softwareSource string = 'https://github.com/danielscholl/elastic-cluster'
+
 @description('Name of the file as it is stored in the share')
-param fileurl string = 'https://github.com/danielscholl/cluster-paas/archive/refs/heads/main.zip'
+param fileurl string = '/archive/refs/heads/main.zip'
 
 @description('The location of the Storage Account and where to deploy the module resources to')
 param location string = resourceGroup().location
@@ -88,7 +91,7 @@ resource uploadFile 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       { name: 'AZURE_STORAGE_ACCOUNT', value: storageAccount.name }
       { name: 'AZURE_STORAGE_KEY', value: storageAccount.listKeys().keys[0].value }
       { name: 'FILE', value: filename }
-      { name: 'URL', value: fileurl }
+      { name: 'URL', value: '${softwareSource}${fileurl}' }
       { name: 'CONTAINER', value: containerName }
       { name: 'UPLOAD_DIR', value: directoryName }
       { name: 'initialDelay', value: initialScriptDelay }
