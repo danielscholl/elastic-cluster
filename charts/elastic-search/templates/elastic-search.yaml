@@ -31,13 +31,20 @@ spec:
       config:
         node.roles: [ "master", "data", "ingest" ]
         node.store.allow_mmap: false
+        # Snapshot
+        plugin.mandatory: repository-azure
+        azure.client.default.account: {{ $.Values.azure.snapshots.storageAccountName }}
+        azure.client.default.container: {{ $.Values.azure.snapshots.containerName }}
+        azure.client.default.auth: workload_identity
       podTemplate:
         spec:
           serviceAccountName: workload-identity-sa  # Specify the service account for authentication
           containers:
             - name: elasticsearch
+              env:
+                - name: AZURE_STORAGE_ACCOUNT
+                  value: {{ $.Values.azure.snapshots.storageAccountName }}
               # Remove the ES_JAVA_OPTS environment variable
-              # env:
               #   - name: ES_JAVA_OPTS
               #     value: "-Xms1g -Xmx1g"
               # If you need to set other environment variables, you can keep the 'env' section

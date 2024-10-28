@@ -705,6 +705,9 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
         {
           name: 'backup'
         }
+        {
+          name: 'snapshots'
+        }
       ]
     }
   }
@@ -1068,7 +1071,10 @@ values.yaml: |
     configEndpoint: {2}
     keyvaultUri: {3}
     keyvaultName: {4}
-  iterateCount: {5}
+    snapshots:
+      storageAccountName: {5}
+      containerName: 'snapshots'
+  iterateCount: {6}
   '''
 }
 
@@ -1089,6 +1095,7 @@ module appConfigMap './aks-config-map/main.bicep' = {
              configurationStore.outputs.endpoint,
              keyvault.outputs.uri,
              keyvault.outputs.name,
+             storageAccount.outputs.name,
              configuration.features.instances)
     ]
 

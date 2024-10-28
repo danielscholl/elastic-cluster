@@ -1,0 +1,47 @@
+{{- $elasticInstances := .Values.elasticInstances | default 1 | int }}
+{{- range $i := until $elasticInstances }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: elasticsearch-snapshot-{{ $i }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  schedule: "0 1 * * *"  # Daily at 1 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: workload-identity-sa
+          containers:
+          - name: snapshot
+            image: curlimages/curl
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Register snapshot repository if it doesn't exist
+              curl -X PUT "http://elasticsearch-{{ $i }}-es-http:9200/_snapshot/azure_backup" -H "Content-Type: application/json" -u elastic:${ELASTIC_PASSWORD} -d '{
+                "type": "azure",
+                "settings": {
+                  "container": "'"${AZURE_CONTAINER_NAME}"'",
+                  "base_path": "snapshots"
+                }
+              }'
+              
+              # Create snapshot
+              curl -X PUT "http://elasticsearch-{{ $i }}-es-http:9200/_snapshot/azure_backup/%3Csnapshot-%7Bnow%2Fd%7D%3E" -H "Content-Type: application/json" -u elastic:${ELASTIC_PASSWORD} -d '{
+                "indices": "*",
+                "ignore_unavailable": true,
+                "include_global_state": true
+              }'
+            env:
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-{{ $i }}-es-elastic-user
+                  key: elastic
+            - name: AZURE_CONTAINER_NAME
+              value: {{ $.Values.azure.snapshots.containerName }}
+          restartPolicy: OnFailure
+{{- end }}

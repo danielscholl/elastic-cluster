@@ -5,6 +5,9 @@ fullnameOverride: elastic-search
 
 azure:
   configEndpoint: "https://el-config.azconfig.io"
+  snapshots:
+    storageAccountName: "el-snapshots"
+    containerName: "snapshots"
 
 elasticInstances: 1
 elasticVersion: "8.15.3"
