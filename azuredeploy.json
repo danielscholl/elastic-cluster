@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "9021520342660478210"
+      "templateHash": "3614283204380489013"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -21896,7 +21896,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "4582417743318635253"
+              "templateHash": "12504895334452059124"
             }
           },
           "parameters": {
@@ -21918,7 +21918,7 @@
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2020-04-01-preview",
               "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
-              "name": "[guid(parameters('storageAccountName'), resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), 'Storage Blob Data Reader')]",
+              "name": "[guid(parameters('storageAccountName'), resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), 'Storage Blob Data Reader', 'flux-extension')]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1')]",
                 "principalId": "[parameters('principalId')]",
