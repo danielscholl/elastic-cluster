@@ -10,6 +10,9 @@
       },
       "enableBlobSoftware": {
         "value": "${ENABLE_BLOB_SOFTWARE}"
+      },
+      "enableAKSBackup": {
+        "value": "${ENABLE_AKS_BACKUP}"
       }
     }
 }
