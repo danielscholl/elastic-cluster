@@ -21,14 +21,11 @@ param enableAKSBackup bool = false
   'Standard_D4s_v3'
   'Standard_DS3_v2'
 ])
-param vmSize string = 'Standard_D4s_v3'
+param vmSize string = 'Standard_D4lds_v5'
 
 @allowed([
   '8.15.3'
   '8.14.3'
-  '7.17.24'
-  '7.17.22'
-  '7.16.3'
 ])
 @description('Elastic Version')
 param elasticVersion string = '8.15.3'
