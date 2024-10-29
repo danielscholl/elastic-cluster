@@ -9,8 +9,6 @@ metadata:
 spec:
   version: {{ $.Values.elasticVersion }}
   config:
-    # Disable memory mapping to avoid vm.max_map_count bootstrap check
-    node.store.allow_mmap: false
     # Azure Repository Plugin settings
     repository.azure.client.default.account: {{ $.Values.azure.storageAccountName }}
     repository.azure.client.default.auth: "MSI"
@@ -27,6 +25,9 @@ spec:
       count: 1
       plugins:
         - repository-azure
+      config:
+        # Disable memory mapping to avoid vm.max_map_count bootstrap check
+        node.store.allow_mmap: false
       podTemplate:
         metadata:
           labels:
