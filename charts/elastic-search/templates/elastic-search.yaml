@@ -20,22 +20,6 @@ spec:
   nodeSets:
     - name: default
       count: 1
-      volumeClaimTemplates:
-        - metadata:
-            name: elasticsearch-data
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: {{ $.Values.storageSize }}
-            storageClassName: {{ $.Values.storageClass | default "managed-premium" }}
-      config:
-        node.roles: [ "master", "data", "ingest" ]
-        node.store.allow_mmap: false
-        # Snapshot
-        plugin.mandatory: repository-azure
-        azure.client.default.auth: workload_identity
       podTemplate:
         metadata:
           labels:
@@ -50,4 +34,21 @@ spec:
               volumeMounts:
                 - name: azure-identity-token
                   mountPath: /usr/share/elasticsearch/config/azure/tokens
+      # volumeClaimTemplates:
+      #   - metadata:
+      #       name: elasticsearch-data
+      #     spec:
+      #       accessModes:
+      #         - ReadWriteOnce
+      #       resources:
+      #         requests:
+      #           storage: {{ $.Values.storageSize }}
+      #       storageClassName: {{ $.Values.storageClass | default "managed-premium" }}
+      # config:
+      #   node.roles: [ "master", "data", "ingest" ]
+      #   node.store.allow_mmap: false
+      #   # Snapshot
+      #   plugin.mandatory: repository-azure
+      #   azure.client.default.auth: workload_identity
+      
 {{- end }}
