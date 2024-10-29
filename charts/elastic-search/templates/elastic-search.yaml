@@ -50,5 +50,5 @@ spec:
             resources:
               requests:
                 storage: {{ $.Values.storageSize }}
-            storageClassName: {{ $.Values.storageClass | default "managed-premium" }}      
+            storageClassName: {{ $.Values.storageClass | default "managed-csi" }}      
 {{- end }}
