@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "17228851279862254016"
+      "templateHash": "5413346142014523941"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -146,14 +146,6 @@
       {
         "secretName": "subscription-id",
         "secretValue": "[subscription().subscriptionId]"
-      },
-      {
-        "secretName": "snapshot-storage",
-        "secretValue": "[if(greater(length(variables('rg_unique_id')), 24), substring(variables('rg_unique_id'), 0, 24), variables('rg_unique_id'))]"
-      },
-      {
-        "secretName": "snapshot-container",
-        "secretValue": "snapshots"
       }
     ],
     "baseElasticKey": "[format('{0}{1}', uniqueString(resourceGroup().id, parameters('location')), uniqueString(subscription().id, deployment().name))]",
@@ -167,7 +159,7 @@
       }
     ],
     "configMaps": {
-      "appConfigTemplate": "values.yaml: |\n  serviceAccount:\n    create: false\n    name: \"workload-identity-sa\"\n  azure:\n    tenantId: {0}\n    clientId: {1}\n    configEndpoint: {2}\n    keyvaultUri: {3}\n    keyvaultName: {4}\n    snapshots:\n      storageAccountName: {5}\n      containerName: 'snapshots'\n  iterateCount: {6}\n  "
+      "appConfigTemplate": "values.yaml: |\n  serviceAccount:\n    create: false\n    name: \"workload-identity-sa\"\n  azure:\n    tenantId: {0}\n    clientId: {1}\n    configEndpoint: {2}\n    keyvaultUri: {3}\n    keyvaultName: {4}\n    storageAccountName: {5}\n  iterateCount: {6}\n  "
     }
   },
   "resources": [
@@ -6075,7 +6067,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "531954750799860293"
+              "templateHash": "14099436865216246445"
             }
           },
           "parameters": {
@@ -6097,8 +6089,7 @@
                 "configurationSettings": {
                   "global.clusterType": "managedclusters"
                 },
-                "extensionType": "microsoft.appconfiguration",
-                "globalServiceAccountEnabled": true
+                "extensionType": "microsoft.appconfiguration"
               }
             }
           ]
@@ -11981,7 +11972,7 @@
           },
           "managedIdentities": {
             "value": {
-              "systemAssigned": true,
+              "systemAssigned": false,
               "userAssignedResourceIds": [
                 "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.resourceId.value]"
               ]
@@ -11994,7 +11985,7 @@
             "value": true
           },
           "keyValues": {
-            "value": "[concat(union(createArray(createObject('name', 'sentinel', 'value', parameters('dateStamp'), 'label', 'common'), createObject('name', 'tenant_id', 'value', subscription().tenantId, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'azure_msi_client_id', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.clientId.value, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'keyvault_uri', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.uri.value, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'instances', 'value', string(variables('configuration').features.instances), 'contentType', 'application/json', 'label', 'elastic-values'), createObject('name', 'version', 'value', string(parameters('elasticVersion')), 'contentType', 'text/plain', 'label', 'elastic-values'), createObject('name', 'storageSize', 'value', '30Gi', 'contentType', 'text/plain', 'label', 'elastic-values'), createObject('name', 'storageClass', 'value', 'managed-premium', 'contentType', 'text/plain', 'label', 'elastic-values'), createObject('name', 'elastic-storage-account', 'value', string(createObject('uri', format('{0}secrets/snapshot-storage', reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.uri.value))), 'contentType', 'application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8', 'label', 'elastic-values'), createObject('name', 'elastic-storage-container', 'value', string(createObject('uri', format('{0}secrets/snapshot-container', reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.uri.value))), 'contentType', 'application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8', 'label', 'elastic-values')), createArray()))]"
+            "value": "[concat(union(createArray(createObject('name', 'sentinel', 'value', parameters('dateStamp'), 'label', 'common'), createObject('name', 'tenant_id', 'value', subscription().tenantId, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'azure_msi_client_id', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.clientId.value, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'keyvault_uri', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.uri.value, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'instances', 'value', string(variables('configuration').features.instances), 'contentType', 'application/json', 'label', 'elastic-values'), createObject('name', 'version', 'value', string(parameters('elasticVersion')), 'contentType', 'text/plain', 'label', 'elastic-values'), createObject('name', 'storageSize', 'value', '30Gi', 'contentType', 'text/plain', 'label', 'elastic-values'), createObject('name', 'storageClass', 'value', 'managed-premium', 'contentType', 'text/plain', 'label', 'elastic-values')), createArray()))]"
           }
         },
         "template": {
@@ -14669,7 +14660,7 @@
                   "name": "backup"
                 },
                 {
-                  "name": "snapshots"
+                  "name": "es-snapshots"
                 }
               ]
             }
