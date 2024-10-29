@@ -37,8 +37,11 @@ spec:
         plugin.mandatory: repository-azure
         azure.client.default.auth: workload_identity
       podTemplate:
+        metadata:
+          labels:
+            azure.workload.identity/use: "true"
         spec:
-          serviceAccountName: workload-identity-sa  # Specify the service account for authentication
+          serviceAccountName: workload-identity-sa
           containers:
             - name: elasticsearch
               env:
