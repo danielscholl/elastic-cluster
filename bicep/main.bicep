@@ -606,6 +606,12 @@ module configurationStore './app-configuration/main.bicep' = {
       }
     ]
 
+    managedIdentities: {
+      userAssignedResourceIds: [
+        identity.outputs.resourceId
+      ]
+    }
+
     enablePurgeProtection: false
     disableLocalAuth: true
 

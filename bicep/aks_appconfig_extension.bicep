@@ -14,5 +14,6 @@ resource appConfigExtension 'Microsoft.KubernetesConfiguration/extensions@2023-0
       'global.clusterType': 'managedclusters'
     }
     extensionType: 'microsoft.appconfiguration'
+    globalServiceAccountEnabled: true
   }
 }
