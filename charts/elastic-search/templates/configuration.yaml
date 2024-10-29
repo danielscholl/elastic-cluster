@@ -12,9 +12,9 @@ spec:
       type: yaml
       key: value.yaml
       separator: "."
-  auth:
-    workloadIdentity:
-      serviceAccountName: workload-identity-sa
+  # auth:
+  #   workloadIdentity:
+  #     serviceAccountName: workload-identity-sa
   configuration:
      selectors:
         - keyFilter: "*"
