@@ -1,0 +1,28 @@
+{{- $elasticInstances := .Values.elasticInstances | default 1 | int }}
+{{- range $i := until $elasticInstances }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: elasticsearch-{{ $i }}-ingress
+  namespace: {{ $.Release.Namespace }}
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: elasticsearch-{{ $i }}-es-http
+            port:
+              number: 9200
+        path: /
+        pathType: Prefix
+      - backend:
+          service:
+            name: kibana-{{ $i }}-kb-http
+            port:
+              number: 5601
+        path: /
+        pathType: Prefix
+{{- end }}

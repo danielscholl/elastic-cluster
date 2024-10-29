@@ -34,6 +34,8 @@ spec:
             azure.workload.identity/use: "true"
         spec:
           serviceAccountName: workload-identity-sa
+          nodeSelector:
+            agentpool: "defaultpool"  # Ensures pods are scheduled on the aks-defaultpool nodes
           containers:
             - name: elasticsearch
               env:

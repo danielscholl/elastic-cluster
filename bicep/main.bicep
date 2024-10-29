@@ -30,8 +30,12 @@ param vmSize string = 'Standard_D4lds_v5'
 @description('Elastic Version')
 param elasticVersion string = '8.15.3'
 
-@description('Optional. DNS Zone Resource ID.')
-param dnsZoneResourceId string = ''
+@description('Optional. DNS Zone Information. Example: { identityResourceId: "", resourceGroup: "", dnsName: "" }')
+param externalDnsInformation object = {
+  resourceGroup: ''
+  dnsZone: ''
+  identityId: ''
+}
 
 @description('Date Stamp - Used for sentinel in configuration store.')
 param dateStamp string = utcNow()
@@ -180,8 +184,11 @@ module managedCluster './managed-cluster/main.bicep' = {
     }
     managedIdentities: {
       systemAssigned: false  
-      userAssignedResourcesIds: [
+      userAssignedResourcesIds: empty(externalDnsInformation.identityId) ? [
         identity.outputs.resourceId
+      ] : [
+        identity.outputs.resourceId
+        externalDnsInformation.identityId
       ]
     }
 
@@ -192,7 +199,7 @@ module managedCluster './managed-cluster/main.bicep' = {
     publicNetworkAccess: 'Enabled'
     outboundType: 'managedNATGateway'
     enablePrivateCluster: false
-    dnsZoneResourceId: !empty(dnsZoneResourceId) ? dnsZoneResourceId : null
+    // dnsZoneResourceId: !empty(dnsZoneResourceId) ? dnsZoneResourceId : null
 
     // Access Settings
     disableLocalAccounts: true
@@ -499,6 +506,19 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
   ]
 }
 
+var dnsConfigs = !empty(externalDnsInformation.resourceGroup) && !empty(externalDnsInformation.dnsZone) ? [
+  {
+    name: 'dns_resource_group'
+    value: externalDnsInformation.resourceGroup
+    label: 'dns-values'
+  }
+  {
+    name: 'dns_zone'
+    value: externalDnsInformation.dnsZone
+    label: 'dns-values'
+  }
+] : []
+
 @description('App Configuration Values')
 var configmapServices = [
   {
@@ -590,7 +610,7 @@ module configurationStore './app-configuration/main.bicep' = {
     disableLocalAuth: true
 
     // Add Configuration
-    keyValues: concat(union(configmapServices, []))
+    keyValues: concat(union(configmapServices, dnsConfigs))
   }
   dependsOn: [
     managedCluster
