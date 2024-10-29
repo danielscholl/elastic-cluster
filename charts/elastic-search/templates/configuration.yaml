@@ -15,6 +15,7 @@ spec:
   auth:
     workloadIdentity:
       serviceAccountName: workload-identity-sa
+      managedIdentityClientId: {{ .Values.azure.clientId }}
   configuration:
      selectors:
         - keyFilter: "*"
