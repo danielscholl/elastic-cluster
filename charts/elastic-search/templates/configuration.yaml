@@ -1,9 +1,9 @@
-{{- $namespace := .Release.Namespace }}
+---
 apiVersion: azconfig.io/v1
 kind: AzureAppConfigurationProvider
 metadata:
   name: {{ include "elastic-search.fullname" . }}-values
-  namespace: {{ $namespace }}
+  namespace: {{ $.Release.Namespace }}
 spec:
   endpoint: {{ .Values.azure.configEndpoint }}
   target:
@@ -14,19 +14,8 @@ spec:
       separator: "."
   auth:
     workloadIdentity:
-      # serviceAccountName: workload-identity-sa
-      managedIdentityClientId: {{ .Values.azure.clientId }}
+      serviceAccountName: workload-identity-sa
   configuration:
      selectors:
         - keyFilter: "*"
           labelFilter: "elastic-values"
-  secret:
-    target:
-      secretName: keystore
-    configuration:
-      selectors:
-        - keyFilter: "*"
-          labelFilter: "elastic-values"
-      keyMapping:
-        "elastic-storage-account": "azure.client.default.account" 
-        "elastic-storage-container": "azure.client.default.container"

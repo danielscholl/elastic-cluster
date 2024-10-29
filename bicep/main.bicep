@@ -424,14 +424,6 @@ var staticSecrets = [
     secretName: 'subscription-id'
     secretValue: subscription().subscriptionId
   }
-  {
-    secretName: 'snapshot-storage'
-    secretValue: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
-  }
-  {
-    secretName: 'snapshot-container'
-    secretValue: 'snapshots'
-  }
 ]
 
 var baseElasticKey = '${uniqueString(resourceGroup().id, location)}${uniqueString(subscription().id, deployment().name)}'
@@ -559,22 +551,6 @@ var configmapServices = [
     contentType: 'text/plain'
     label: 'elastic-values'
   }
-  {
-    name: 'elastic-storage-account'
-    value: string({
-      uri: '${keyvault.outputs.uri}secrets/snapshot-storage'
-    })
-    contentType: 'application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8'
-    label: 'elastic-values'
-  }
-  {
-    name: 'elastic-storage-container'
-    value: string({
-      uri: '${keyvault.outputs.uri}secrets/snapshot-container'
-    })
-    contentType: 'application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8'
-    label: 'elastic-values'
-  }
 ]
 
 // AVM doesn't have a nice way to create the values in the store, so we forked the module.
@@ -607,7 +583,7 @@ module configurationStore './app-configuration/main.bicep' = {
     ]
 
     managedIdentities: {
-      systemAssigned: true
+      systemAssigned: false
       userAssignedResourceIds: [
         identity.outputs.resourceId
       ]
@@ -623,8 +599,6 @@ module configurationStore './app-configuration/main.bicep' = {
     managedCluster
   ]
 }
-
-
 
 
 
@@ -739,7 +713,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
           name: 'backup'
         }
         {
-          name: 'snapshots'
+          name: 'es-snapshots'
         }
       ]
     }
@@ -1115,9 +1089,7 @@ values.yaml: |
     configEndpoint: {2}
     keyvaultUri: {3}
     keyvaultName: {4}
-    snapshots:
-      storageAccountName: {5}
-      containerName: 'snapshots'
+    storageAccountName: {5}
   iterateCount: {6}
   '''
 }
