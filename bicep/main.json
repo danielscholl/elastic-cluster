@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "15151751624056901226"
+      "templateHash": "2458026655225298824"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -25,9 +25,13 @@
         "description": "Location of the Software Source Code."
       }
     },
-    "enableBlobSoftware": {
-      "type": "bool",
-      "defaultValue": true,
+    "softwareLocation": {
+      "type": "string",
+      "defaultValue": "azureBlob",
+      "allowedValues": [
+        "gitRepository",
+        "azureBlob"
+      ],
       "metadata": {
         "description": "Enable Software from Azure Blob Storage (Requires Storage Account Key Access)."
       }
@@ -116,7 +120,7 @@
       },
       "features": {
         "enableStampElastic": true,
-        "enablePrivateSoftware": "[parameters('enableBlobSoftware')]",
+        "enablePrivateSoftware": "[equals(parameters('softwareLocation'), 'azureBlob')]",
         "enableMesh": false,
         "enablePaasPool": false,
         "enableStampTest": true,
