@@ -7,7 +7,7 @@ metadata description = 'This deploys a managed Kubernetes cluster.'
 param location string = resourceGroup().location
 
 @description('Location of the Software Source Code.')
-param softwareSource string = 'https://github.com/danielscholl/elastic-cluster'
+param sourceLocation string = 'https://github.com/danielscholl/elastic-cluster'
 
 
 @allowed([
@@ -919,7 +919,7 @@ module gitOpsUpload './software-upload/main.bicep' = [for item in directoryUploa
     managedIdentityName: identity.outputs.name
     existingManagedIdentitySubId: subscription().subscriptionId
     existingManagedIdentityResourceGroupName: resourceGroup().name
-    softwareSource: softwareSource
+    softwareSource: sourceLocation
     directoryName: item.directory
   }
   dependsOn: [
@@ -1028,7 +1028,7 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
       sshKnownHosts: ''
       syncIntervalInSeconds: 60
       timeoutInSeconds: 300
-      url: softwareSource
+      url: sourceLocation
     } : null
     
     azureBlob: configuration.features.enablePrivateSoftware ? {
