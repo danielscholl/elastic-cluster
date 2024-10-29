@@ -49,6 +49,6 @@ spec:
                   name: elasticsearch-{{ $i }}-es-elastic-user
                   key: elastic
             - name: AZURE_CONTAINER_NAME
-              value: {{ $.Values.azure.snapshots.containerName }}
+              value: es-snapshots
           restartPolicy: OnFailure
 {{- end }}
