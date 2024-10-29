@@ -10,7 +10,7 @@ param location string = resourceGroup().location
 param softwareSource string = 'https://github.com/danielscholl/elastic-cluster'
 
 @description('Enable Software from Azure Blob Storage (Requires Storage Account Key Access).')
-param enableBlobSoftware bool = false
+param enableBlobSoftware bool = true
 
 @description('Enable Backup to Backup Vaults (Requires Storage Account Key Access).')
 param enableAKSBackup bool = false
@@ -31,7 +31,7 @@ param vmSize string = 'Standard_DS3_v2'
 param elasticVersion string = '8.15.3'
 
 @description('Optional. DNS Zone Information. Example: { identityResourceId: "", resourceGroup: "", dnsName: "" }')
-param externalDnsInformation object = {
+param externalDnsInfo object = {
   resourceGroup: ''
   dnsZone: ''
   identityId: ''
@@ -184,7 +184,7 @@ module managedCluster './managed-cluster/main.bicep' = {
     }
     managedIdentities: {
       systemAssigned: false  
-      userAssignedResourcesIds: empty(externalDnsInformation.identityId) ? [
+      userAssignedResourcesIds: empty(externalDnsInfo.identityId) ? [
         identity.outputs.resourceId
       ] : [
         identity.outputs.resourceId
@@ -505,15 +505,15 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
   ]
 }
 
-var dnsConfigs = !empty(externalDnsInformation.resourceGroup) && !empty(externalDnsInformation.dnsZone) ? [
+var dnsConfigs = !empty(externalDnsInfo.resourceGroup) && !empty(externalDnsInfo.dnsZone) ? [
   {
     name: 'dns_resource_group'
-    value: externalDnsInformation.resourceGroup
+    value: externalDnsInfo.resourceGroup
     label: 'dns-values'
   }
   {
     name: 'dns_zone'
-    value: externalDnsInformation.dnsZone
+    value: externalDnsInfo.dnsZone
     label: 'dns-values'
   }
 ] : []
@@ -707,7 +707,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {
     ]
 
     allowBlobPublicAccess: false
-    allowSharedKeyAccess: configuration.features.enablePrivateSoftware
+    allowSharedKeyAccess: configuration.features.enableBackup
     publicNetworkAccess: 'Enabled'
 
     networkAcls: {

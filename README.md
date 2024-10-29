@@ -1,9 +1,20 @@
 # Best Practices Elastic Search Cluster
 
-This is a sample project for exploring best practices using a cluster running instances of elastic search that strives to implement the [best practices](https://learn.microsoft.com/en-us/azure/aks/best-practices) of Azure Kubernetes Service (AKS).
+This project demonstrates best-in-class standards and practices for running an Elasticsearch cluster on Azure Kubernetes Service (AKS) and aims to implement as many [best practices](https://learn.microsoft.com/en-us/azure/aks/best-practices) recommended by Azure.
 
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fdanielscholl%2Felastic-cluster%2Fmain%2Fazuredeploy.json)
+
+
+#### Important Notes
+
+- Ingress with valid certificates and DNS is not yet implemented.
+- AKS Backup instances are not automatically configured for backup feature flag.
+
+> Note: Backup requires Storage Accounts with `Allow Storage Account Key Access` offering no support for Managed Identity -- Bad Practice.
+
+> Note: Flux Configurations with AzureBlob don't work with NAT Gateway so requires Public Network Access -- Bad Practice
+
 
 
 ### Best Practices for Cluster Security and Upgrades.
@@ -180,13 +191,4 @@ az feature show --namespace Microsoft.ContainerService --name AutomaticSKUPrevie
 
 When the status reflects *Registered*, refresh the registration of the *Microsoft.ContainerService* resource provider by using the [az provider register](https://learn.microsoft.com/en-us/cli/azure/provider?view=azure-cli-latest#az-provider-register) command:
 
-
-#### Important Notes
-
-- Ingress with valid certificates and DNS is not yet implemented.
-- AKS Backup instances are not automatically configured for backup feature flag.
-
-> Note: Backup requires Storage Accounts with `Allow Storage Account Key Access` offering no support for Managed Identity -- Bad Practice.
-
-> Note: Flux Configurations with AzureBlob don't work with NAT Gateway so requires Public Network Access -- Bad Practice
 

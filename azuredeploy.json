@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "10188939163567889997"
+      "templateHash": "15151751624056901226"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -27,7 +27,7 @@
     },
     "enableBlobSoftware": {
       "type": "bool",
-      "defaultValue": false,
+      "defaultValue": true,
       "metadata": {
         "description": "Enable Software from Azure Blob Storage (Requires Storage Account Key Access)."
       }
@@ -62,7 +62,7 @@
         "description": "Elastic Version"
       }
     },
-    "externalDnsInformation": {
+    "externalDnsInfo": {
       "type": "object",
       "defaultValue": {
         "resourceGroup": "",
@@ -151,7 +151,7 @@
     ],
     "baseElasticKey": "[format('{0}{1}', uniqueString(resourceGroup().id, parameters('location')), uniqueString(subscription().id, deployment().name))]",
     "vaultSecrets": "[union(variables('staticSecrets'), flatten(variables('elasticSecrets')))]",
-    "dnsConfigs": "[if(and(not(empty(parameters('externalDnsInformation').resourceGroup)), not(empty(parameters('externalDnsInformation').dnsZone))), createArray(createObject('name', 'dns_resource_group', 'value', parameters('externalDnsInformation').resourceGroup, 'label', 'dns-values'), createObject('name', 'dns_zone', 'value', parameters('externalDnsInformation').dnsZone, 'label', 'dns-values')), createArray())]",
+    "dnsConfigs": "[if(and(not(empty(parameters('externalDnsInfo').resourceGroup)), not(empty(parameters('externalDnsInfo').dnsZone))), createArray(createObject('name', 'dns_resource_group', 'value', parameters('externalDnsInfo').resourceGroup, 'label', 'dns-values'), createObject('name', 'dns_zone', 'value', parameters('externalDnsInfo').dnsZone, 'label', 'dns-values')), createArray())]",
     "directoryUploads": [
       {
         "directory": "software"
@@ -2761,7 +2761,7 @@
           "managedIdentities": {
             "value": {
               "systemAssigned": false,
-              "userAssignedResourcesIds": "[if(empty(parameters('externalDnsInformation').identityId), createArray(reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.resourceId.value), createArray(reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.resourceId.value))]"
+              "userAssignedResourcesIds": "[if(empty(parameters('externalDnsInfo').identityId), createArray(reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.resourceId.value), createArray(reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.resourceId.value))]"
             }
           },
           "networkPlugin": {
@@ -14632,7 +14632,7 @@
             "value": false
           },
           "allowSharedKeyAccess": {
-            "value": "[variables('configuration').features.enablePrivateSoftware]"
+            "value": "[variables('configuration').features.enableBackup]"
           },
           "publicNetworkAccess": {
             "value": "Enabled"
