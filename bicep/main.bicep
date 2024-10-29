@@ -7,15 +7,15 @@ metadata description = 'This deploys a managed Kubernetes cluster.'
 param location string = resourceGroup().location
 
 @description('Location of the Software Source Code.')
-param softwareSource string = 'https://github.com/danielscholl/elastic-cluster'
+param softwareLocation string = 'https://github.com/danielscholl/elastic-cluster'
 
 
 @allowed([
-  'gitRepository'
   'azureBlob'
+  'gitRepository'
 ])
-@description('Enable Software from Azure Blob Storage (Requires Storage Account Key Access).')
-param sourceLocation string = 'azureBlob'
+@description('Flux source location for software definition.')
+param sourceHost string = 'azureBlob'
 
 @description('Enable Backup to Backup Vaults (Requires Storage Account Key Access).')
 param enableAKSBackup bool = false
@@ -74,7 +74,7 @@ var configuration = {
   }
   features: {
     enableStampElastic: true
-    enablePrivateSoftware: sourceLocation == 'azureBlob'
+    enablePrivateSoftware: sourceHost == 'azureBlob'
     enableMesh: false
     enablePaasPool: false
     enableStampTest: true
@@ -919,7 +919,7 @@ module gitOpsUpload './software-upload/main.bicep' = [for item in directoryUploa
     managedIdentityName: identity.outputs.name
     existingManagedIdentitySubId: subscription().subscriptionId
     existingManagedIdentityResourceGroupName: resourceGroup().name
-    softwareSource: softwareSource
+    softwareSource: softwareLocation
     directoryName: item.directory
   }
   dependsOn: [
@@ -1028,7 +1028,7 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
       sshKnownHosts: ''
       syncIntervalInSeconds: 60
       timeoutInSeconds: 300
-      url: softwareSource
+      url: softwareLocation
     } : null
     
     azureBlob: configuration.features.enablePrivateSoftware ? {

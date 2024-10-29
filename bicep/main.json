@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "9419564242013357600"
+      "templateHash": "1634876541140453196"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -18,22 +18,22 @@
         "description": "Specify the Azure region to place the application definition."
       }
     },
-    "softwareSource": {
+    "softwareLocation": {
       "type": "string",
       "defaultValue": "https://github.com/danielscholl/elastic-cluster",
       "metadata": {
         "description": "Location of the Software Source Code."
       }
     },
-    "sourceLocation": {
+    "sourceHost": {
       "type": "string",
       "defaultValue": "azureBlob",
       "allowedValues": [
-        "gitRepository",
-        "azureBlob"
+        "azureBlob",
+        "gitRepository"
       ],
       "metadata": {
-        "description": "Enable Software from Azure Blob Storage (Requires Storage Account Key Access)."
+        "description": "Flux source location for software definition."
       }
     },
     "enableAKSBackup": {
@@ -120,7 +120,7 @@
       },
       "features": {
         "enableStampElastic": true,
-        "enablePrivateSoftware": "[equals(parameters('sourceLocation'), 'azureBlob')]",
+        "enablePrivateSoftware": "[equals(parameters('sourceHost'), 'azureBlob')]",
         "enableMesh": false,
         "enablePaasPool": false,
         "enableStampTest": true,
@@ -20671,7 +20671,7 @@
             "value": "[resourceGroup().name]"
           },
           "softwareSource": {
-            "value": "[parameters('softwareSource')]"
+            "value": "[parameters('softwareLocation')]"
           },
           "directoryName": {
             "value": "[variables('directoryUploads')[copyIndex()].directory]"
@@ -21993,7 +21993,7 @@
             "value": false
           },
           "sourceKind": "[if(variables('configuration').features.enablePrivateSoftware, createObject('value', 'AzureBlob'), createObject('value', 'GitRepository'))]",
-          "gitRepository": "[if(not(variables('configuration').features.enablePrivateSoftware), createObject('value', createObject('repositoryRef', createObject('branch', 'main'), 'sshKnownHosts', '', 'syncIntervalInSeconds', 60, 'timeoutInSeconds', 300, 'url', parameters('softwareSource'))), createObject('value', null()))]",
+          "gitRepository": "[if(not(variables('configuration').features.enablePrivateSoftware), createObject('value', createObject('repositoryRef', createObject('branch', 'main'), 'sshKnownHosts', '', 'syncIntervalInSeconds', 60, 'timeoutInSeconds', 300, 'url', parameters('softwareLocation'))), createObject('value', null()))]",
           "azureBlob": "[if(variables('configuration').features.enablePrivateSoftware, createObject('value', createObject('containerName', 'gitops', 'url', reference(resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('configuration').name)), '2022-09-01').outputs.primaryBlobEndpoint.value, 'managedIdentity', createObject('clientId', reference(resourceId('Microsoft.Resources/deployments', format('{0}-script-clientId', variables('configuration').name)), '2022-09-01').outputs.outputs.value.clientId))), createObject('value', null()))]",
           "kustomizations": {
             "value": "[shallowMerge(createArray(createObject('global', createObject('path', './software/stamp-global', 'dependsOn', createArray(), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), if(variables('configuration').features.enableStampTest, createObject('test', createObject('path', './software/stamp-test', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject()), if(variables('configuration').features.enableStampElastic, createObject('elastic', createObject('path', './software/stamp-elastic', 'dependsOn', createArray('global'), 'syncIntervalInSeconds', 300, 'timeoutInSeconds', 300, 'validation', 'none', 'prune', true())), createObject())))]"
