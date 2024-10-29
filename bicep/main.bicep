@@ -17,12 +17,11 @@ param enableAKSBackup bool = false
 
 @description('The size of the VM to use for the cluster.')
 @allowed([
-  'Standard_D4lds_v5'
-  'Standard_D2pds_v5'
-  'Standard_D4plds_v5'
   'Standard_DS3_v2'
+  'Standard_D4pds_v5'
+  'Standard_D4ds_v4'
 ])
-param vmSize string = 'Standard_D2pds_v5'
+param vmSize string = 'Standard_DS3_v2'
 
 @allowed([
   '8.15.3'

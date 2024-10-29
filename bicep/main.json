@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "5413346142014523941"
+      "templateHash": "253029718757426420"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -41,11 +41,11 @@
     },
     "vmSize": {
       "type": "string",
-      "defaultValue": "Standard_D4s_v3",
+      "defaultValue": "Standard_DS3_v2",
       "allowedValues": [
-        "Standard_D4lds_v5",
-        "Standard_D4s_v3",
-        "Standard_DS3_v2"
+        "Standard_DS3_v2",
+        "Standard_D4pds_v5",
+        "Standard_D4ds_v4"
       ],
       "metadata": {
         "description": "The size of the VM to use for the cluster."
@@ -56,20 +56,21 @@
       "defaultValue": "8.15.3",
       "allowedValues": [
         "8.15.3",
-        "8.14.3",
-        "7.17.24",
-        "7.17.22",
-        "7.16.3"
+        "8.14.3"
       ],
       "metadata": {
         "description": "Elastic Version"
       }
     },
-    "dnsZoneResourceId": {
-      "type": "string",
-      "defaultValue": "",
+    "externalDnsInformation": {
+      "type": "object",
+      "defaultValue": {
+        "resourceGroup": "",
+        "dnsZone": "",
+        "identityId": ""
+      },
       "metadata": {
-        "description": "Optional. DNS Zone Resource ID."
+        "description": "Optional. DNS Zone Information. Example: { identityResourceId: \"\", resourceGroup: \"\", dnsName: \"\" }"
       }
     },
     "dateStamp": {
@@ -150,6 +151,7 @@
     ],
     "baseElasticKey": "[format('{0}{1}', uniqueString(resourceGroup().id, parameters('location')), uniqueString(subscription().id, deployment().name))]",
     "vaultSecrets": "[union(variables('staticSecrets'), flatten(variables('elasticSecrets')))]",
+    "dnsConfigs": "[if(and(not(empty(parameters('externalDnsInformation').resourceGroup)), not(empty(parameters('externalDnsInformation').dnsZone))), createArray(createObject('name', 'dns_resource_group', 'value', parameters('externalDnsInformation').resourceGroup, 'label', 'dns-values'), createObject('name', 'dns_zone', 'value', parameters('externalDnsInformation').dnsZone, 'label', 'dns-values')), createArray())]",
     "directoryUploads": [
       {
         "directory": "software"
@@ -2759,9 +2761,7 @@
           "managedIdentities": {
             "value": {
               "systemAssigned": false,
-              "userAssignedResourcesIds": [
-                "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.resourceId.value]"
-              ]
+              "userAssignedResourcesIds": "[if(empty(parameters('externalDnsInformation').identityId), createArray(reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.resourceId.value), createArray(reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.resourceId.value, parameters('externalDnsInformation').identityId))]"
             }
           },
           "networkPlugin": {
@@ -2782,7 +2782,6 @@
           "enablePrivateCluster": {
             "value": false
           },
-          "dnsZoneResourceId": "[if(not(empty(parameters('dnsZoneResourceId'))), createObject('value', parameters('dnsZoneResourceId')), createObject('value', null()))]",
           "disableLocalAccounts": {
             "value": true
           },
@@ -11985,7 +11984,7 @@
             "value": true
           },
           "keyValues": {
-            "value": "[concat(union(createArray(createObject('name', 'sentinel', 'value', parameters('dateStamp'), 'label', 'common'), createObject('name', 'tenant_id', 'value', subscription().tenantId, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'azure_msi_client_id', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.clientId.value, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'keyvault_uri', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.uri.value, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'instances', 'value', string(variables('configuration').features.instances), 'contentType', 'application/json', 'label', 'elastic-values'), createObject('name', 'version', 'value', string(parameters('elasticVersion')), 'contentType', 'text/plain', 'label', 'elastic-values'), createObject('name', 'storageSize', 'value', '30Gi', 'contentType', 'text/plain', 'label', 'elastic-values'), createObject('name', 'storageClass', 'value', 'managed-premium', 'contentType', 'text/plain', 'label', 'elastic-values')), createArray()))]"
+            "value": "[concat(union(createArray(createObject('name', 'sentinel', 'value', parameters('dateStamp'), 'label', 'common'), createObject('name', 'tenant_id', 'value', subscription().tenantId, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'azure_msi_client_id', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.clientId.value, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'keyvault_uri', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-keyvault', variables('configuration').name)), '2022-09-01').outputs.uri.value, 'contentType', 'text/plain', 'label', 'system-values'), createObject('name', 'instances', 'value', string(variables('configuration').features.instances), 'contentType', 'application/json', 'label', 'elastic-values'), createObject('name', 'version', 'value', string(parameters('elasticVersion')), 'contentType', 'text/plain', 'label', 'elastic-values'), createObject('name', 'storageSize', 'value', '30Gi', 'contentType', 'text/plain', 'label', 'elastic-values'), createObject('name', 'storageClass', 'value', 'managed-premium', 'contentType', 'text/plain', 'label', 'elastic-values')), variables('dnsConfigs')))]"
           }
         },
         "template": {
