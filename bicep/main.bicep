@@ -15,7 +15,7 @@ param softwareSource string = 'https://github.com/danielscholl/elastic-cluster'
   'azureBlob'
 ])
 @description('Enable Software from Azure Blob Storage (Requires Storage Account Key Access).')
-param softwareLocation string = 'azureBlob'
+param sourceLocation string = 'azureBlob'
 
 @description('Enable Backup to Backup Vaults (Requires Storage Account Key Access).')
 param enableAKSBackup bool = false
@@ -74,7 +74,7 @@ var configuration = {
   }
   features: {
     enableStampElastic: true
-    enablePrivateSoftware: softwareLocation == 'azureBlob'
+    enablePrivateSoftware: sourceLocation == 'azureBlob'
     enableMesh: false
     enablePaasPool: false
     enableStampTest: true

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "2458026655225298824"
+      "templateHash": "9419564242013357600"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -25,7 +25,7 @@
         "description": "Location of the Software Source Code."
       }
     },
-    "softwareLocation": {
+    "sourceLocation": {
       "type": "string",
       "defaultValue": "azureBlob",
       "allowedValues": [
@@ -120,7 +120,7 @@
       },
       "features": {
         "enableStampElastic": true,
-        "enablePrivateSoftware": "[equals(parameters('softwareLocation'), 'azureBlob')]",
+        "enablePrivateSoftware": "[equals(parameters('sourceLocation'), 'azureBlob')]",
         "enableMesh": false,
         "enablePaasPool": false,
         "enableStampTest": true,
