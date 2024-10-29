@@ -607,6 +607,7 @@ module configurationStore './app-configuration/main.bicep' = {
     ]
 
     managedIdentities: {
+      systemAssigned: true
       userAssignedResourceIds: [
         identity.outputs.resourceId
       ]

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "14794530550746871362"
+      "templateHash": "17228851279862254016"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -6075,7 +6075,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "14099436865216246445"
+              "templateHash": "531954750799860293"
             }
           },
           "parameters": {
@@ -6097,7 +6097,8 @@
                 "configurationSettings": {
                   "global.clusterType": "managedclusters"
                 },
-                "extensionType": "microsoft.appconfiguration"
+                "extensionType": "microsoft.appconfiguration",
+                "globalServiceAccountEnabled": true
               }
             }
           ]
@@ -11977,6 +11978,14 @@
                 "principalType": "ServicePrincipal"
               }
             ]
+          },
+          "managedIdentities": {
+            "value": {
+              "systemAssigned": true,
+              "userAssignedResourceIds": [
+                "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.resourceId.value]"
+              ]
+            }
           },
           "enablePurgeProtection": {
             "value": false
