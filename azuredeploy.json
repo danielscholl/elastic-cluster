@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "253029718757426420"
+      "templateHash": "10188939163567889997"
     },
     "name": "Managed Kubernetes.",
     "description": "This deploys a managed Kubernetes cluster."
@@ -2761,7 +2761,7 @@
           "managedIdentities": {
             "value": {
               "systemAssigned": false,
-              "userAssignedResourcesIds": "[if(empty(parameters('externalDnsInformation').identityId), createArray(reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.resourceId.value), createArray(reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.resourceId.value, parameters('externalDnsInformation').identityId))]"
+              "userAssignedResourcesIds": "[if(empty(parameters('externalDnsInformation').identityId), createArray(reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.resourceId.value), createArray(reference(resourceId('Microsoft.Resources/deployments', format('{0}-user-managed-identity', variables('configuration').name)), '2022-09-01').outputs.resourceId.value))]"
             }
           },
           "networkPlugin": {

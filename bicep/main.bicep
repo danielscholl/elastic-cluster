@@ -188,7 +188,6 @@ module managedCluster './managed-cluster/main.bicep' = {
         identity.outputs.resourceId
       ] : [
         identity.outputs.resourceId
-        externalDnsInformation.identityId
       ]
     }
 
