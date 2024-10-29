@@ -8,8 +8,11 @@ metadata:
   namespace: {{ $.Release.Namespace }}
 spec:
   version: {{ $.Values.elasticVersion }}
-  secureSettings:
-    - secretName: keystore
+  config:
+    # Azure Repository Plugin settings
+    repository.azure.client.default.account: {{ $.Values.azure.storageAccountName }}
+    repository.azure.client.default.auth: "MSI"
+    repository.azure.token_file: "/var/run/secrets/azure/tokens/azure-identity-token"
   http:
     tls:
       selfSignedCertificate:
@@ -20,6 +23,8 @@ spec:
   nodeSets:
     - name: default
       count: 1
+      plugins:
+        - repository-azure
       podTemplate:
         metadata:
           labels:
@@ -30,20 +35,17 @@ spec:
             - name: elasticsearch
               env:
                 - name: AZURE_FEDERATED_TOKEN_FILE
-                  value: /usr/share/elasticsearch/config/azure/tokens/azure-identity-token
-              volumeMounts:
-                - name: azure-identity-token
-                  mountPath: /usr/share/elasticsearch/config/azure/tokens
-      # volumeClaimTemplates:
-      #   - metadata:
-      #       name: elasticsearch-data
-      #     spec:
-      #       accessModes:
-      #         - ReadWriteOnce
-      #       resources:
-      #         requests:
-      #           storage: {{ $.Values.storageSize }}
-      #       storageClassName: {{ $.Values.storageClass | default "managed-premium" }}
+                  value: /var/run/secrets/azure/tokens/azure-identity-token
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: {{ $.Values.storageSize }}
+            storageClassName: {{ $.Values.storageClass | default "managed-premium" }}
       # config:
       #   node.roles: [ "master", "data", "ingest" ]
       #   node.store.allow_mmap: false
