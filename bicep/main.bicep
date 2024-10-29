@@ -562,7 +562,7 @@ var configmapServices = [
   {
     name: 'elastic-storage-account'
     value: string({
-      uri: '${keyvault.outputs.uri}/secrets/snapshot-storage'
+      uri: '${keyvault.outputs.uri}secrets/snapshot-storage'
     })
     contentType: 'application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8'
     label: 'elastic-values'
@@ -570,7 +570,7 @@ var configmapServices = [
   {
     name: 'elastic-storage-container'
     value: string({
-      uri: '${keyvault.outputs.uri}/secrets/snapshot-container'
+      uri: '${keyvault.outputs.uri}secrets/snapshot-container'
     })
     contentType: 'application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8'
     label: 'elastic-values'
@@ -907,6 +907,7 @@ var directoryUploads = [
   }
 ]
 
+@batchSize(1)
 module gitOpsUpload './software-upload/main.bicep' = [for item in directoryUploads: {
   name: '${configuration.name}-storage-${item.directory}-upload'
   params: {
