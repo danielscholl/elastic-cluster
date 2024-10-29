@@ -414,110 +414,6 @@ module registry 'br/public:avm/res/container-registry/registry:0.5.1' = {
 /////////////////////////////////////////////////////////////////////
 //  Configuration Resources                                        //
 /////////////////////////////////////////////////////////////////////
-@description('App Configuration Values')
-var configmapServices = [
-  {
-    name: 'sentinel'
-    value: dateStamp
-    label: 'common'
-  }
-  {
-    name: 'tenant_id'
-    value: subscription().tenantId
-    contentType: 'text/plain'
-    label: 'system-values'
-  }
-  {
-    name: 'azure_msi_client_id'
-    value: identity.outputs.clientId
-    contentType: 'text/plain'
-    label: 'system-values'
-  }
-  {
-    name: 'keyvault_uri'
-    value: keyvault.outputs.uri
-    contentType: 'text/plain'
-    label: 'system-values'
-  }
-  {
-    name: 'instances'
-    value: string(configuration.features.instances)
-    contentType: 'application/json'
-    label: 'elastic-values'
-  }
-  {
-    name: 'version'
-    value: string(elasticVersion)
-    contentType: 'text/plain'
-    label: 'elastic-values'
-  }
-  {
-    name: 'storageSize'
-    value: '30Gi'
-    contentType: 'text/plain'
-    label: 'elastic-values'
-  }
-  {
-    name: 'storageClass'
-    value: 'managed-premium'
-    contentType: 'text/plain'
-    label: 'elastic-values'
-  }
-  {
-    name: 'elastic-storage-account'
-    value: storageAccount.outputs.name
-    contentType: 'text/plain'
-    label: 'elastic-secrets'
-  }
-  {
-    name: 'elastic-storage-container'
-    value: 'snapshots'
-    contentType: 'text/plain'
-    label: 'elastic-secrets'
-  }
-]
-
-// AVM doesn't have a nice way to create the values in the store, so we forked the module.
-module configurationStore './app-configuration/main.bicep' = {
-  name: '${configuration.name}-appconfig'
-  params: {
-    // Required parameters
-    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id    
-    location: location
-    sku: configuration.appconfig.sku
-
-    // Assign Tags
-    tags: {
-      layer: configuration.displayName
-      id: rg_unique_id
-    }
-
-    diagnosticSettings: [
-      {
-        workspaceResourceId: logAnalytics.outputs.resourceId
-      }
-    ]
-
-    roleAssignments: [
-      {
-        roleDefinitionIdOrName: 'App Configuration Data Reader'
-        principalId: identity.outputs.principalId
-        principalType: 'ServicePrincipal'
-      }
-    ]
-
-    enablePurgeProtection: false
-    disableLocalAuth: true
-
-    // Add Configuration
-    keyValues: concat(union(configmapServices, []))
-  }
-  dependsOn: [
-    managedCluster
-  ]
-}
-
-
 // Static secrets
 var staticSecrets = [
   {
@@ -527,6 +423,14 @@ var staticSecrets = [
   {
     secretName: 'subscription-id'
     secretValue: subscription().subscriptionId
+  }
+  {
+    secretName: 'snapshot-storage'
+    secretValue: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
+  }
+  {
+    secretName: 'snapshot-container'
+    secretValue: 'snapshots'
   }
 ]
 
@@ -605,6 +509,116 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
     natClusterIP
   ]
 }
+
+@description('App Configuration Values')
+var configmapServices = [
+  {
+    name: 'sentinel'
+    value: dateStamp
+    label: 'common'
+  }
+  {
+    name: 'tenant_id'
+    value: subscription().tenantId
+    contentType: 'text/plain'
+    label: 'system-values'
+  }
+  {
+    name: 'azure_msi_client_id'
+    value: identity.outputs.clientId
+    contentType: 'text/plain'
+    label: 'system-values'
+  }
+  {
+    name: 'keyvault_uri'
+    value: keyvault.outputs.uri
+    contentType: 'text/plain'
+    label: 'system-values'
+  }
+  {
+    name: 'instances'
+    value: string(configuration.features.instances)
+    contentType: 'application/json'
+    label: 'elastic-values'
+  }
+  {
+    name: 'version'
+    value: string(elasticVersion)
+    contentType: 'text/plain'
+    label: 'elastic-values'
+  }
+  {
+    name: 'storageSize'
+    value: '30Gi'
+    contentType: 'text/plain'
+    label: 'elastic-values'
+  }
+  {
+    name: 'storageClass'
+    value: 'managed-premium'
+    contentType: 'text/plain'
+    label: 'elastic-values'
+  }
+  {
+    name: 'elastic-storage-account'
+    value: string({
+      uri: '${keyvault.outputs.uri}/secrets/snapshot-storage'
+    })
+    contentType: 'application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8'
+    label: 'elastic-values'
+  }
+  {
+    name: 'elastic-storage-container'
+    value: string({
+      uri: '${keyvault.outputs.uri}/secrets/snapshot-container'
+    })
+    contentType: 'application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8'
+    label: 'elastic-values'
+  }
+]
+
+// AVM doesn't have a nice way to create the values in the store, so we forked the module.
+module configurationStore './app-configuration/main.bicep' = {
+  name: '${configuration.name}-appconfig'
+  params: {
+    // Required parameters
+    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id    
+    location: location
+    sku: configuration.appconfig.sku
+
+    // Assign Tags
+    tags: {
+      layer: configuration.displayName
+      id: rg_unique_id
+    }
+
+    diagnosticSettings: [
+      {
+        workspaceResourceId: logAnalytics.outputs.resourceId
+      }
+    ]
+
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: 'App Configuration Data Reader'
+        principalId: identity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+    ]
+
+    enablePurgeProtection: false
+    disableLocalAuth: true
+
+    // Add Configuration
+    keyValues: concat(union(configmapServices, []))
+  }
+  dependsOn: [
+    managedCluster
+  ]
+}
+
+
+
 
 
 /////////////////////////////////////////////////////////////////////

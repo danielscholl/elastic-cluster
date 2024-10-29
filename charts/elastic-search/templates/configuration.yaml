@@ -24,8 +24,8 @@ spec:
       secretName: keystore
     configuration:
       selectors:
-        - keyFilter: "*"  # Gets all keys with label elastic-secrets
-          labelFilter: "elastic-secrets"
+        - keyFilter: "*"
+          labelFilter: "elastic-values"
       keyMapping:
-        "elastic-storage-account": "azure.client.default.account"     # Renames the key in the final secret
-        "elastic-storage-container": "azure.client.default.container" # Renames another key
+        "elastic-storage-account": "azure.client.default.account" 
+        "elastic-storage-container": "azure.client.default.container"
