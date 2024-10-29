@@ -14,8 +14,8 @@ spec:
       separator: "."
   auth:
     workloadIdentity:
-      serviceAccountName: workload-identity-sa
-      # managedIdentityClientId: {{ .Values.azure.clientId }}
+      # serviceAccountName: workload-identity-sa
+      managedIdentityClientId: {{ .Values.azure.clientId }}
   configuration:
      selectors:
         - keyFilter: "*"
@@ -27,6 +27,6 @@ spec:
       selectors:
         - keyFilter: "*"
           labelFilter: "elastic-values"
-  #     keyMapping:
-  #       "elastic-storage-account": "azure.client.default.account" 
-  #       "elastic-storage-container": "azure.client.default.container"
+      keyMapping:
+        "elastic-storage-account": "azure.client.default.account" 
+        "elastic-storage-container": "azure.client.default.container"
