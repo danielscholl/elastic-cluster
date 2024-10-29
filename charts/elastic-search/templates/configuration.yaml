@@ -13,10 +13,7 @@ spec:
       key: value.yaml
       separator: "."
   auth:
-    workloadIdentity:
-      serviceAccountName: workload-identity-sa
-      clientId: {{ .Values.azure.clientId }}
-      tenantId: {{ .Values.azure.tenantId }}
+    managedIdentityClientId: {{ .Values.azure.clientId }}
   configuration:
      selectors:
         - keyFilter: "*"
