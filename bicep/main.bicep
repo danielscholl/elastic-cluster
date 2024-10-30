@@ -844,6 +844,7 @@ module backupExtension './aks_backup_extension.bicep' = if (configuration.featur
     clusterName: managedCluster.outputs.name
     storageAccountName: storageAccount.outputs.name
     backupVaultName: configuration.features.enableBackup ? backupVault.outputs.name : ''
+    managedIdentityPrincipalId: identity.outputs.principalId
   }
 }
 
@@ -895,6 +896,17 @@ module trustedRoleBinding 'br/public:avm/res/resources/deployment-script:0.4.0' 
     '''
   }
 }
+
+
+// module backupInstance './aks_backup_instance.bicep' = if (configuration.features.enableBackup) {
+//   name: '${configuration.name}-backup-instance'
+//   params: {
+//     snapshotResourceGroupId: resourceGroup().id
+//     clusterName: managedCluster.outputs.name
+//     backupVaultName: configuration.features.enableBackup ? backupVault.outputs.name : ''
+//     policyName: 'Manual'
+//   }
+// }
 
 /////////////////////////////////////////////////////////////////////
 //  Software Resources                                               //

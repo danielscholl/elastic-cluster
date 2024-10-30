@@ -8,8 +8,8 @@
       "location": {
         "value": "${AZURE_LOCATION}"
       },
-      "enableBlobSoftware": {
-        "value": "${ENABLE_BLOB_SOFTWARE}"
+      "sourceHost": {
+        "value": "${GITOPS_SOURCE}"
       },
       "enableAKSBackup": {
         "value": "${ENABLE_AKS_BACKUP}"

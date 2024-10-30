@@ -10,6 +10,9 @@ param storageAccountName string
 @description('The name of the backup vault to be used.')
 param backupVaultName string
 
+@description('The solution managed identity.')
+param managedIdentityPrincipalId string
+
 resource existingManagedCluster 'Microsoft.ContainerService/managedClusters@2024-04-02-preview' existing = {
   name: clusterName
 }
@@ -114,7 +117,8 @@ resource roleContributorClusterToResourceGroup 'Microsoft.Authorization/roleAssi
   scope: resourceGroup()
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c') // Contributor role definition ID
-    principalId: existingManagedCluster.properties.identityProfile.kubeletIdentity.objectId
+    // principalId: existingManagedCluster.properties.identityProfile.kubeletIdentity.objectId
+    principalId: managedIdentityPrincipalId
     principalType: 'ServicePrincipal'
   }
 }
