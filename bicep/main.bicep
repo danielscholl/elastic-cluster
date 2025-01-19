@@ -13,6 +13,7 @@ param softwareLocation string = 'https://github.com/danielscholl/elastic-cluster
 @allowed([
   'azureBlob'
   'gitRepository'
+  ''
 ])
 @description('Flux source location for software definition.')
 param sourceHost string = 'azureBlob'
@@ -23,17 +24,19 @@ param enableAKSBackup bool = false
 @description('The size of the VM to use for the cluster.')
 @allowed([
   'Standard_DS3_v2'
+  'Standard_D2s_v5'
   'Standard_D4pds_v5'
   'Standard_D4ds_v4'
 ])
 param vmSize string = 'Standard_DS3_v2'
 
 @allowed([
+  '8.17.0'
   '8.15.3'
   '8.14.3'
 ])
 @description('Elastic Version')
-param elasticVersion string = '8.15.3'
+param elasticVersion string = '8.17.0'
 
 @description('Optional. DNS Zone Information. Example: { identityResourceId: "", resourceGroup: "", dnsName: "" }')
 param externalDnsInfo object = {
@@ -188,7 +191,7 @@ module managedCluster './managed-cluster/main.bicep' = {
       clientId: 'msi'
     }
     managedIdentities: {
-      systemAssigned: false  
+      systemAssigned: false
       userAssignedResourcesIds: empty(externalDnsInfo.identityId) ? [
         identity.outputs.resourceId
       ] : [
@@ -228,7 +231,7 @@ module managedCluster './managed-cluster/main.bicep' = {
     enableStorageProfileDiskCSIDriver: true
     enableStorageProfileFileCSIDriver: true
     enableStorageProfileSnapshotController: true
-    enableStorageProfileBlobCSIDriver: true    
+    enableStorageProfileBlobCSIDriver: true
     enableKeyvaultSecretsProvider: true
     enableSecretRotation: true
     enableImageCleaner: true
@@ -237,12 +240,12 @@ module managedCluster './managed-cluster/main.bicep' = {
     enableWorkloadIdentity: true
     azurePolicyEnabled: true
     omsAgentEnabled: true
-    
+
     // Auto-Scaling
     vpaAddon: true
     kedaAddon: true
     enableNodeAutoProvisioning: true
-    
+
     maintenanceConfiguration: {
       maintenanceWindow: {
         schedule: {
@@ -382,7 +385,7 @@ module registry 'br/public:avm/res/container-registry/registry:0.5.1' = {
   name: '${configuration.name}-registry'
   params: {
     // Required parameters
-    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id  
+    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
     location: location
     acrSku: configuration.registry.sku
 
@@ -415,7 +418,7 @@ module registry 'br/public:avm/res/container-registry/registry:0.5.1' = {
     acrAdminUserEnabled: false
     azureADAuthenticationAsArmPolicyStatus: 'disabled'
   }
-  
+
 }
 
 
@@ -462,7 +465,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
     name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
     location: location
     sku: configuration.vault.sku
-    
+
     // Assign Tags
     tags: {
       layer: configuration.displayName
@@ -476,7 +479,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.9.0' = {
     ]
 
     enablePurgeProtection: false
-    
+
     // Configure RBAC
     enableRbacAuthorization: true
     roleAssignments: [{
@@ -579,7 +582,7 @@ module configurationStore './app-configuration/main.bicep' = {
   name: '${configuration.name}-appconfig'
   params: {
     // Required parameters
-    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id    
+    name: length(rg_unique_id) > 24 ? substring(rg_unique_id, 0, 24) : rg_unique_id
     location: location
     sku: configuration.appconfig.sku
 
@@ -638,7 +641,7 @@ module prometheus 'aks_prometheus.bicep' = {
       id: rg_unique_id
     }
 
-    publicNetworkAccess: 'Enabled'    
+    publicNetworkAccess: 'Enabled'
     clusterName: managedCluster.outputs.name
     actionGroupId: ''
   }
@@ -851,7 +854,7 @@ module backupExtension './aks_backup_extension.bicep' = if (configuration.featur
 // Had to use a deployment script to create the trusted role binding as this is only a cli command.
 module trustedRoleBinding 'br/public:avm/res/resources/deployment-script:0.4.0' = if (configuration.features.enableBackup) {
   name: '${configuration.name}-script-trustedRoleBinding'
-  
+
   params: {
     kind: 'AzureCLI'
     name: 'aksTrustedRoleBindingScript'
@@ -881,7 +884,7 @@ module trustedRoleBinding 'br/public:avm/res/resources/deployment-script:0.4.0' 
         value: 'backup-binding'
       }
     ]
-    
+
     timeout: 'PT30M'
     retentionInterval: 'PT1H'
 
@@ -947,7 +950,7 @@ module fluxExtension './flux-extension/main.bicep' = {
     clusterName: managedCluster.outputs.name
     location: location
     extensionType: 'microsoft.flux'
-    name: 'flux'    
+    name: 'flux'
     releaseNamespace: 'flux-system'
     releaseTrain: 'Stable'
 
@@ -966,7 +969,7 @@ module fluxExtension './flux-extension/main.bicep' = {
 // This is a custom module to get the clientId of the extension identity.
 module extensionClientId 'br/public:avm/res/resources/deployment-script:0.4.0' = if (configuration.features.enablePrivateSoftware) {
   name: '${configuration.name}-script-clientId'
-  
+
   params: {
     kind: 'AzureCLI'
     name: 'aksExtensionClientId'
@@ -988,7 +991,7 @@ module extensionClientId 'br/public:avm/res/resources/deployment-script:0.4.0' =
         value: fluxExtension.outputs.principalId
       }
     ]
-    
+
     timeout: 'PT30M'
     retentionInterval: 'PT1H'
 
@@ -997,7 +1000,7 @@ module extensionClientId 'br/public:avm/res/resources/deployment-script:0.4.0' =
 
       echo "Looking up client ID for $principalId in ResourceGroup $rgName"
       clientId=$(az identity list --resource-group $rgName --query "[?principalId=='$principalId'] | [0].clientId" -otsv)
-      
+
       echo "Found ClientId: $clientId"
       echo "{\"clientId\":\"$clientId\"}" | jq -c '.' > $AZ_SCRIPTS_OUTPUT_PATH
     '''
@@ -1032,7 +1035,7 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
     scope: 'cluster'
     suspend: false
     sourceKind: configuration.features.enablePrivateSoftware ? 'AzureBlob' : 'GitRepository'
-    
+
     gitRepository: !configuration.features.enablePrivateSoftware ? {
       repositoryRef: {
         branch: 'main'
@@ -1042,7 +1045,7 @@ module fluxConfiguration './flux-configuration/main.bicep' = {
       timeoutInSeconds: 300
       url: softwareLocation
     } : null
-    
+
     azureBlob: configuration.features.enablePrivateSoftware ? {
       containerName: 'gitops'
       url: storageAccount.outputs.primaryBlobEndpoint
@@ -1135,11 +1138,11 @@ module appConfigMap './aks-config-map/main.bicep' = {
     location: location
     name: 'system-values'
     namespace: 'default'
-    
+
     // Order of items matters here.
     fileData: [
-      format(configMaps.appConfigTemplate, 
-             subscription().tenantId, 
+      format(configMaps.appConfigTemplate,
+             subscription().tenantId,
              identity.outputs.clientId,
              configurationStore.outputs.endpoint,
              keyvault.outputs.uri,

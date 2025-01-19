@@ -1,5 +1,17 @@
 {{- $elasticInstances := .Values.elasticInstances | default 1 | int }}
 {{- range $i := until $elasticInstances }}
+{{- if not $.Values.azure }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kibana-{{ $i }}-service-account
+  namespace: {{ $.Release.Namespace }}
+  annotations:
+    elastic.co/service-account: "true"
+type: Opaque
+data: {}
+{{- end }}
 ---
 apiVersion: kibana.k8s.elastic.co/v1
 kind: Kibana
@@ -9,32 +21,43 @@ metadata:
   annotations:
     kibana.k8s.elastic.co/skip-auth-config: "true" # Disable service account auth.
 spec:
-  version: {{ $.Values.elasticVersion }}
-  # elasticsearchRef:
-  #   name: elasticsearch-{{ $i }}
+  version: {{ $.Values.elasticVersion | default $.Chart.AppVersion }}
+  {{- if not $.Values.azure }}
+  elasticsearchRef:
+    name: elasticsearch-{{ $i }}
+  {{- end }}
   config:
-    elasticsearch.hosts: "http://elasticsearch-{{ $i }}-es-http.{{ $.Release.Namespace }}.svc.cluster.local:9200"
+    elasticsearch.hosts: ["http://elasticsearch-{{ $i }}-es-http.{{ $.Release.Namespace }}.svc.cluster.local:9200"]
+    {{- if $.Values.azure }}
     elasticsearch.username: "${ELASTICSEARCH_USERNAME}"
     elasticsearch.password: "${ELASTICSEARCH_PASSWORD}"
     xpack.encryptedSavedObjects.encryptionKey: "${XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY}"
+    {{- end }}
   count: 1
   podTemplate:
     spec:
+      {{- if $.Values.nodeSelector }}
+      nodeSelector:
+        agentpool: z2pool
+      tolerations:
+      - effect: NoSchedule
+        key: app
+        value: {{ $.Values.nodeSelector }}
+      {{- end }}
       initContainers:
       - name: health-check
-        image: mcr.microsoft.com/cbl-mariner/base/core:2.0
+        image: docker.elastic.co/kibana/kibana:{{ $.Values.elasticVersion | default $.Chart.AppVersion }}
         command: ["/bin/sh"]
         args:
         - -c
         - |
-          tdnf install -y curl jq && \
           while true; do
-            health_status=$(curl -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" -k -s "http://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200/_cluster/health" | jq -r '.status')
-            if [ "$health_status" = "green" ]; then
+            response=$(curl -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" -k -s "http://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200/_cluster/health")
+            if echo "$response" | grep -q '"status":"green"'; then
               echo "Cluster health is green."
               exit 0
             fi
-            echo "Cluster health is $health_status. Waiting for it to be green..."
+            echo "Waiting for cluster to be green... Current response: $response"
             sleep 30
           done
         env:
@@ -48,6 +71,7 @@ spec:
       containers:
         - name: kibana
           env:
+            {{- if $.Values.azure }}
             - name: ELASTICSEARCH_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -63,6 +87,7 @@ spec:
                 secretKeyRef:
                   name: elasticsearch-credentials
                   key: key-{{ $i }}
+            {{- end }}
       volumes:
       - name: es-basic-auth  # Default credentials for elastic.
         secret:

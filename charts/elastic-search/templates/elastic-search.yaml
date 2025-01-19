@@ -6,47 +6,157 @@ kind: Elasticsearch
 metadata:
   name: elasticsearch-{{ $i }}
   namespace: {{ $.Release.Namespace }}
+  annotations:
+    eck.k8s.elastic.co/downward-node-labels: "topology.kubernetes.io/zone"
 spec:
-  version: {{ $.Values.elasticVersion }}
-  config:
-    # Azure Repository Plugin settings
-    repository.azure.client.default.account: {{ $.Values.azure.storageAccountName }}
-    repository.azure.client.default.auth: "MSI"
-    repository.azure.token_file: "/var/run/secrets/azure/tokens/azure-identity-token"
+  version: {{ $.Values.elasticVersion | default $.Chart.AppVersion }}
+  {{- if $.Values.azure.storageAccountName }}
+  secureSettings:
+  - secretName: {{ $.Release.Name }}-keystore
+  {{- end }}
+  nodeSets:
+  {{- if eq (int $.Values.zones) 3 }}
+  # Three node HA cluster configuration - one node per zone
+  - name: zone1
+    count: 1
+    config:
+      node.store.allow_mmap: false
+      # All nodes are master-eligible and data nodes with all roles
+      node.roles: ["master", "data", "ingest", "ml", "remote_cluster_client", "transform"]
+    podTemplate:
+      metadata:
+        {{- if $.Values.azure }}
+        labels:
+          azure.workload.identity/use: "true"
+        {{- end }}
+      spec:
+        {{- if $.Values.nodeSelector }}
+        nodeSelector:
+          agentpool: z1pool
+        tolerations:
+        - effect: NoSchedule
+          key: app
+          value: {{ $.Values.nodeSelector }}
+        {{- end }}
+  - name: zone2
+    count: 1
+    config:
+      node.store.allow_mmap: false
+      node.roles: ["master", "data", "ingest", "ml", "remote_cluster_client", "transform"]
+    podTemplate:
+      metadata:
+        {{- if $.Values.azure }}
+        labels:
+          azure.workload.identity/use: "true"
+        {{- end }}
+      spec:
+        {{- if $.Values.nodeSelector }}
+        nodeSelector:
+          agentpool: z2pool
+        tolerations:
+        - effect: NoSchedule
+          key: app
+          value: {{ $.Values.nodeSelector }}
+        {{- end }}
+  - name: zone3
+    count: 1
+    config:
+      node.store.allow_mmap: false
+      node.roles: ["master", "data", "ingest", "ml", "remote_cluster_client", "transform"]
+    podTemplate:
+      metadata:
+        {{- if $.Values.azure }}
+        labels:
+          azure.workload.identity/use: "true"
+        {{- end }}
+      spec:
+        {{- if $.Values.nodeSelector }}
+        nodeSelector:
+          agentpool: z3pool
+        tolerations:
+        - effect: NoSchedule
+          key: app
+          value: {{ $.Values.nodeSelector }}
+        {{- end }}
+  {{- else if eq (int $.Values.zones) 2 }}
+  # Two node cluster configuration - one master-eligible node and one data-only node
+  - name: zone1
+    count: 1
+    config:
+      node.store.allow_mmap: false
+      # This node has all roles including master
+      node.roles: ["master", "data", "ingest", "ml", "remote_cluster_client", "transform"]
+    podTemplate:
+      metadata:
+        {{- if $.Values.azure }}
+        labels:
+          azure.workload.identity/use: "true"
+        {{- end }}
+      spec:
+        {{- if $.Values.nodeSelector }}
+        nodeSelector:
+          agentpool: z1pool
+        tolerations:
+        - effect: NoSchedule
+          key: app
+          value: {{ $.Values.nodeSelector }}
+        {{- end }}
+  - name: zone2
+    count: 1
+    config:
+      node.store.allow_mmap: false
+      # This node has all roles except master
+      node.roles: ["data", "ingest", "ml", "remote_cluster_client", "transform"]
+    podTemplate:
+      metadata:
+        {{- if $.Values.azure }}
+        labels:
+          azure.workload.identity/use: "true"
+        {{- end }}
+      spec:
+        {{- if $.Values.nodeSelector }}
+        nodeSelector:
+          agentpool: z2pool
+        tolerations:
+        - effect: NoSchedule
+          key: app
+          value: {{ $.Values.nodeSelector }}
+        {{- end }}
+  {{- else }}
+  # Single node configuration
+  - name: default
+    count: 1
+    config:
+      node.store.allow_mmap: false
+      node.roles: ["master", "data", "ingest"]
+    podTemplate:
+      metadata:
+        {{- if $.Values.azure }}
+        labels:
+          azure.workload.identity/use: "true"
+        {{- end }}
+      spec:
+        {{- if $.Values.nodeSelector }}
+        nodeSelector:
+          agentpool: z1pool
+        tolerations:
+        - effect: NoSchedule
+          key: app
+          value: {{ $.Values.nodeSelector }}
+        {{- end }}
+  {{- end }}
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ $.Values.storageSize | default "4Gi" }}
+        storageClassName: {{ $.Values.storageClass | default "managed-premium" }}
   http:
     tls:
       selfSignedCertificate:
         disabled: true
-    service:
-      spec:
-        type: ClusterIP
-  nodeSets:
-    - name: default
-      count: 1
-      plugins:
-        - repository-azure
-      config:
-        # Disable memory mapping to avoid vm.max_map_count bootstrap check
-        node.store.allow_mmap: false
-      podTemplate:
-        metadata:
-          labels:
-            azure.workload.identity/use: "true"
-        spec:
-          serviceAccountName: workload-identity-sa
-          containers:
-            - name: elasticsearch
-              env:
-                - name: AZURE_FEDERATED_TOKEN_FILE
-                  value: /var/run/secrets/azure/tokens/azure-identity-token
-      volumeClaimTemplates:
-        - metadata:
-            name: elasticsearch-data
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: {{ $.Values.storageSize }}
-            storageClassName: {{ $.Values.storageClass | default "managed-premium" }}      
 {{- end }}

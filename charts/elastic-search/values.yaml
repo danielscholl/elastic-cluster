@@ -1,16 +1,59 @@
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
 
+# Default values for elastic-search
+# This is a YAML-formatted file.
+
+# Override the release name
 fullnameOverride: elastic-search
 
-azure:
-  configEndpoint: "https://el-config.azconfig.io"
-  snapshots:
-    storageAccountName: "el-snapshots"
-    containerName: "snapshots"
+#----------------------------------------------------------------------------------
+# Elasticsearch Core Configuration
+#----------------------------------------------------------------------------------
+# elasticVersion: "8.17.0"    # Elasticsearch version (defaults to Chart's appVersion)
+# elasticInstances: 1         # Number of Elasticsearch instances
 
-elasticInstances: 1
-elasticVersion: "8.15.3"
-storageSize: "30Gi"
-storageClass: "managed-premium"
 
+#----------------------------------------------------------------------------------
+# Node Placement Configuration
+#----------------------------------------------------------------------------------
+# nodeSelector: "cluster-paas"
+
+
+#----------------------------------------------------------------------------------
+# Storage Configuration
+#----------------------------------------------------------------------------------
+# storage:
+#   size: "4Gi"             # Storage size for each Elasticsearch node
+#   class: "managed-premium" # Kubernetes storage class to use
+
+
+#----------------------------------------------------------------------------------
+# Resource Configuration
+#----------------------------------------------------------------------------------
+# resources:
+#   requests:
+#     cpu: "1"
+#     memory: "2Gi"
+#   limits:
+#     cpu: "2"
+#     memory: "3Gi"
+
+
+#----------------------------------------------------------------------------------
+# High Availability Configuration
+#
+#   1: Single node, all roles (default)
+#   2: Two nodes - one master+data, one data-only (not recommended)
+#   3: Three nodes - all roles, full HA (recommended for production)
+#----------------------------------------------------------------------------------
+# zones: 1
+
+
+#----------------------------------------------------------------------------------
+# Azure Integration Configuration
+#----------------------------------------------------------------------------------
+# Azure configuration for App Config and Snapshot support
+azure: {}
+# azure:
+#   configEndpoint: "https://el-config.azconfig.io"    # Azure App Configuration endpoint
+#   storageAccountName: "el-snapshots"                 # Storage account for snapshots
+#   storageAccountContainer: "el-snapshots"            # Container name for snapshots

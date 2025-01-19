@@ -1,3 +1,4 @@
+{{- if .Values.azure.configEndpoint }}
 ---
 apiVersion: azconfig.io/v1
 kind: AzureAppConfigurationProvider
@@ -19,3 +20,4 @@ spec:
      selectors:
         - keyFilter: "*"
           labelFilter: "elastic-values"
+{{- end }}

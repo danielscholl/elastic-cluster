@@ -1,3 +1,4 @@
+{{- if .Values.azure.storageAccountName }}
 {{- $elasticInstances := .Values.elasticInstances | default 1 | int }}
 {{- range $i := until $elasticInstances }}
 ---
@@ -15,11 +16,14 @@ spec:
           serviceAccountName: workload-identity-sa
           containers:
           - name: snapshot
-            image: curlimages/curl
+            image: mcr.microsoft.com/cbl-mariner/base/core:2.0
             command:
             - /bin/sh
             - -c
             - |
+              # Install required tools
+              tdnf install -y curl
+
               # Wait for Elasticsearch to be ready
               until curl -s "http://elasticsearch-{{ $i }}-es-http:9200/_cluster/health" -u elastic:${ELASTIC_PASSWORD} | grep -q '"status":"green\|yellow"'; do
                 echo "Waiting for Elasticsearch..."
@@ -34,7 +38,7 @@ spec:
                   "base_path": "snapshots"
                 }
               }'
-              
+
               # Create snapshot with date-based name
               DATE=$(date +%Y-%m-%d)
               curl -X PUT "http://elasticsearch-{{ $i }}-es-http:9200/_snapshot/azure_backup/snapshot-${DATE}" -H "Content-Type: application/json" -u elastic:${ELASTIC_PASSWORD} -d '{
@@ -49,6 +53,7 @@ spec:
                   name: elasticsearch-{{ $i }}-es-elastic-user
                   key: elastic
             - name: AZURE_CONTAINER_NAME
-              value: es-snapshots
+              value: {{ $.Values.azure.storageAccountContainer | default "el-snapshots" }}
           restartPolicy: OnFailure
+{{- end }}
 {{- end }}

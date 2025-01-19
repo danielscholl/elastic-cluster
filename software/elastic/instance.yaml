@@ -6,7 +6,6 @@ metadata:
 spec:
   targetNamespace: elastic
   releaseName: elastic-search
-  # Add dependsOn section here
   dependsOn:
     - name: elastic-operator
       namespace: flux-system
@@ -27,9 +26,3 @@ spec:
     - kind: ConfigMap
       name: system-values
       valuesKey: values.yaml
-  values:
-    elasticsearch:
-      instances:
-        - version: 8.7.1
-          storage:
-            size: 30Gi
