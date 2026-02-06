@@ -18,19 +18,13 @@ kind: Kibana
 metadata:
   name: kibana-{{ $i }}
   namespace: {{ $.Release.Namespace }}
-  annotations:
-    kibana.k8s.elastic.co/skip-auth-config: "true" # Disable service account auth.
+  annotations: {}
 spec:
   version: {{ $.Values.elasticVersion | default $.Chart.AppVersion }}
-  {{- if not $.Values.azure }}
   elasticsearchRef:
     name: elasticsearch-{{ $i }}
-  {{- end }}
   config:
-    elasticsearch.hosts: ["http://elasticsearch-{{ $i }}-es-http.{{ $.Release.Namespace }}.svc.cluster.local:9200"]
     {{- if $.Values.azure }}
-    elasticsearch.username: "${ELASTICSEARCH_USERNAME}"
-    elasticsearch.password: "${ELASTICSEARCH_PASSWORD}"
     xpack.encryptedSavedObjects.encryptionKey: "${XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY}"
     {{- end }}
   count: 1
@@ -72,16 +66,6 @@ spec:
         - name: kibana
           env:
             {{- if $.Values.azure }}
-            - name: ELASTICSEARCH_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: elasticsearch-credentials
-                  key: username-{{ $i }}
-            - name: ELASTICSEARCH_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: elasticsearch-credentials
-                  key: password-{{ $i }}
             - name: XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY
               valueFrom:
                 secretKeyRef:
