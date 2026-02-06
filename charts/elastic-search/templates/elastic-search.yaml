@@ -159,4 +159,8 @@ spec:
     tls:
       selfSignedCertificate:
         disabled: true
+      {{- if $.Values.externalDNS }}
+      certificate:
+        secretName: {{ (index $.Values.externalDNS.certificates "elasticsearch").secretName | default "elastic-search-es-tls" }}
+      {{- end }}
 {{- end }}
