@@ -1,3 +1,4 @@
+{{- if .Values.externalDNS }}
 {{- $elasticInstances := .Values.elasticInstances | default 1 | int }}
 {{- range $i := until $elasticInstances }}
 ---
@@ -6,10 +7,15 @@ kind: Ingress
 metadata:
   name: elasticsearch-{{ $i }}-ingress
   namespace: {{ $.Release.Namespace }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $.Values.externalDNS.clusterIssuer | default "letsencrypt-prod" }}
+    ingress-type: elasticsearch
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
 spec:
-  ingressClassName: webapprouting.kubernetes.azure.com
+  ingressClassName: {{ $.Values.externalDNS.ingressClassName | default "webapprouting.kubernetes.azure.com" }}
   rules:
-  - http:
+  - host: {{ $.Values.externalDNS.elasticsearchHostname }}
+    http:
       paths:
       - backend:
           service:
@@ -18,6 +24,26 @@ spec:
               number: 9200
         path: /
         pathType: Prefix
+  tls:
+  - hosts:
+    - {{ $.Values.externalDNS.elasticsearchHostname }}
+    secretName: {{ (index $.Values.externalDNS.certificates "elasticsearch").secretName | default "elastic-search-es-tls" }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kibana-{{ $i }}-ingress
+  namespace: {{ $.Release.Namespace }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $.Values.externalDNS.clusterIssuer | default "letsencrypt-prod" }}
+    ingress-type: kibana
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+spec:
+  ingressClassName: {{ $.Values.externalDNS.ingressClassName | default "webapprouting.kubernetes.azure.com" }}
+  rules:
+  - host: {{ $.Values.externalDNS.kibanaHostname }}
+    http:
+      paths:
       - backend:
           service:
             name: kibana-{{ $i }}-kb-http
@@ -25,4 +51,9 @@ spec:
               number: 5601
         path: /
         pathType: Prefix
+  tls:
+  - hosts:
+    - {{ $.Values.externalDNS.kibanaHostname }}
+    secretName: {{ (index $.Values.externalDNS.certificates "kibana").secretName | default "elastic-search-kb-tls" }}
+{{- end }}
 {{- end }}
