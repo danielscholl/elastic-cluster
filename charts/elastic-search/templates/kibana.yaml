@@ -46,7 +46,7 @@ spec:
         - -c
         - |
           while true; do
-            response=$(curl -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" -k -s "http://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200/_cluster/health")
+            response=$(curl -u "elastic:$(cat /mnt/elasticsearch-es-elastic-user/elastic)" -k -s "{{ if $.Values.externalDNS }}https{{ else }}http{{ end }}://elasticsearch-{{ $i }}-es-http.${NAMESPACE}.svc.cluster.local:9200/_cluster/health")
             if echo "$response" | grep -q '"status":"green"'; then
               echo "Cluster health is green."
               exit 0
