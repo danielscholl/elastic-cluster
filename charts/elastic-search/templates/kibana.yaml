@@ -70,7 +70,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: elasticsearch-credentials
-                  key: key-{{ $i }}
+                  key: elastic-key
             {{- end }}
       volumes:
       - name: es-basic-auth  # Default credentials for elastic.
